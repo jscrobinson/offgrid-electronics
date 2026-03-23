@@ -1,0 +1,77 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [master]
+  push:
+    branches: [master]
+
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+
+jobs:
+  lint-markdown:
+    name: Lint Markdown
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Lint markdown files
+        uses: DavidAnson/markdownlint-cli2-action@v19
+        with:
+          globs: "docs/**/*.md"
+          config: .markdownlint.json
+
+  lint-scripts:
+    name: Lint Shell Scripts
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: ShellCheck
+        uses: ludeeus/action-shellcheck@2.0.0
+        with:
+          scandir: scripts/
+          severity: warning
+
+  validate-docs:
+    name: Validate Documentation
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check all planned docs exist
+        run: python3 tests/test_docs_exist.py
+
+      - name: Check for broken internal links
+        run: python3 tests/test_internal_links.py
+
+  build-html:
+    name: Build HTML
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Build HTML documentation
+        run: python3 scripts/build-html.py
+
+      - name: Verify HTML output
+        run: python3 tests/test_html_build.py
+
+  validate-configs:
+    name: Validate Configs
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Validate YAML configs
+        run: python3 -c "import yaml; yaml.safe_load(open('config/meshtastic-presets.yaml'))"
+        continue-on-error: false
+
+      - name: Validate config file format
+        run: python3 tests/test_configs.py
