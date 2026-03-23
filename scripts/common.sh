@@ -13,6 +13,7 @@ NC='\033[0m' # No Color
 PROJECT_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 BUILD_DIR="${PROJECT_ROOT}/build"
 CONFIG_DIR="${PROJECT_ROOT}/config"
+export PROJECT_ROOT BUILD_DIR CONFIG_DIR
 
 # Logging
 log_info()  { echo -e "${BLUE}[INFO]${NC}  $*"; }

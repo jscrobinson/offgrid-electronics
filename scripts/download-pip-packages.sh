@@ -50,4 +50,4 @@ echo "To install offline:"
 echo "  pip install --no-index --find-links ${PKG_DIR} <package-name>"
 echo ""
 echo "Cached packages:"
-ls "${PKG_DIR}"/*.whl "${PKG_DIR}"/*.tar.gz 2>/dev/null | xargs -I{} basename {} | head -20
+find "${PKG_DIR}" -maxdepth 1 \( -name '*.whl' -o -name '*.tar.gz' \) -print0 | xargs -0 -I{} basename {} | head -20

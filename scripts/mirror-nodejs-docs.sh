@@ -8,9 +8,6 @@ section "Mirroring Node.js Documentation"
 DEST=$(ensure_build_dir "docs/nodejs")
 NODE_VERSION="v20.11.1"
 
-# Node.js docs are included in the source tarball, or we can mirror the website
-DOCS_URL="https://nodejs.org/dist/${NODE_VERSION}/docs/apilinks.json"
-
 # Download the full Node.js docs directory
 log_info "Downloading Node.js API docs..."
 

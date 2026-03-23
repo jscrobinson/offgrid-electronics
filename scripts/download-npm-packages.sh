@@ -46,4 +46,4 @@ echo "  # Or point npm to local cache:"
 echo "  npm install --cache ${PKG_DIR} <package-name>"
 echo ""
 echo "Cached packages:"
-ls "${PKG_DIR}"/*.tgz 2>/dev/null | xargs -I{} basename {} | head -20
+find "${PKG_DIR}" -maxdepth 1 -name '*.tgz' -print0 | xargs -0 -I{} basename {} | head -20
