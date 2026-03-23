@@ -1,0 +1,123 @@
+# Meshtastic Configuration Presets
+# Use with: meshtastic --set-config <section>.<key> <value>
+# Or import via the web/app interface
+
+# =============================================================================
+# Preset: Mobile Node (Default for handheld use)
+# =============================================================================
+mobile_node:
+  description: "Default settings for a handheld/mobile Meshtastic node"
+  device:
+    role: CLIENT
+  lora:
+    region: US        # Change to EU_868, AU_915, etc. as needed
+    modem_preset: LONG_FAST  # Good balance of range and speed
+    hop_limit: 3
+    tx_power: 0       # 0 = max allowed for region
+  position:
+    position_broadcast_secs: 900  # 15 minutes
+    gps_update_interval: 120      # 2 minutes
+    position_flags: 811           # Altitude + heading + speed
+  display:
+    screen_on_secs: 60
+    auto_screen_carousel_secs: 0  # Disabled
+  power:
+    wait_bluetooth_secs: 60
+    ls_secs: 300      # Light sleep after 5 min
+    min_wake_secs: 10
+
+# =============================================================================
+# Preset: Fixed Solar Router
+# =============================================================================
+solar_router:
+  description: "Solar-powered relay/router node — optimized for low power and max coverage"
+  device:
+    role: ROUTER
+  lora:
+    region: US
+    modem_preset: LONG_FAST
+    hop_limit: 3
+    tx_power: 0
+  position:
+    position_broadcast_secs: 3600  # Once per hour
+    gps_update_interval: 3600
+    fixed_position: true  # Set after first GPS fix, saves power
+  display:
+    screen_on_secs: 0  # Display off (no one looking at it)
+  power:
+    wait_bluetooth_secs: 0   # No Bluetooth needed
+    ls_secs: 60              # Aggressive light sleep
+    min_wake_secs: 10
+  # Note: disable WiFi to save power
+  # meshtastic --set network.wifi_enabled false
+
+# =============================================================================
+# Preset: Maximum Range (Long Slow)
+# =============================================================================
+max_range:
+  description: "Maximum range at cost of speed — for sparse networks or long-distance links"
+  device:
+    role: CLIENT
+  lora:
+    region: US
+    modem_preset: LONG_SLOW  # SF12, 125kHz — max range
+    hop_limit: 7             # Allow more hops
+    tx_power: 0
+  position:
+    position_broadcast_secs: 1800
+    gps_update_interval: 300
+
+# =============================================================================
+# Preset: High Throughput (Short Range)
+# =============================================================================
+high_throughput:
+  description: "Fast messaging for events or dense local areas"
+  device:
+    role: CLIENT
+  lora:
+    region: US
+    modem_preset: SHORT_FAST  # SF7, 250kHz — fast, short range
+    hop_limit: 3
+    tx_power: 0
+  position:
+    position_broadcast_secs: 300
+    gps_update_interval: 60
+
+# =============================================================================
+# Preset: Tracker (GPS asset tracking)
+# =============================================================================
+tracker:
+  description: "Frequent position updates for tracking a vehicle or person"
+  device:
+    role: TRACKER
+  lora:
+    region: US
+    modem_preset: LONG_FAST
+    hop_limit: 3
+    tx_power: 0
+  position:
+    position_broadcast_secs: 60   # Every minute
+    gps_update_interval: 30       # GPS fix every 30 sec
+    position_flags: 811
+  power:
+    ls_secs: 0  # Never sleep — continuous tracking
+
+# =============================================================================
+# Preset: Repeater (Dumb relay)
+# =============================================================================
+repeater:
+  description: "Simple packet repeater — no display, no position, just relays"
+  device:
+    role: REPEATER
+  lora:
+    region: US
+    modem_preset: LONG_FAST
+    hop_limit: 3
+    tx_power: 0
+  position:
+    position_broadcast_secs: 0   # No position broadcasts
+    gps_enabled: false
+  display:
+    screen_on_secs: 0
+  power:
+    wait_bluetooth_secs: 0

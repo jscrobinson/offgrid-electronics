@@ -1,0 +1,28 @@
+# npm packages to cache for offline installation
+# One package per line. Comments start with #
+
+# Web frameworks
+express
+fastify
+
+# Hardware/serial
+serialport
+johnny-five
+
+# Communication
+mqtt
+socket.io
+ws
+
+# Utilities
+axios
+commander
+dotenv
+chalk
+
+# IoT / Automation
+node-red
+
+# Build tools
+typescript
+eslint

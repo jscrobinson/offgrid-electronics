@@ -1,0 +1,13 @@
+build/
+downloads/
+*.tar
+*.tar.gz
+*.zip
+*.iso
+*.img
+*.whl
+*.tgz
+node_modules/
+__pycache__/
+.DS_Store
+Thumbs.db

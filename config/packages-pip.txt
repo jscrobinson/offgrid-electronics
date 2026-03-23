@@ -1,0 +1,41 @@
+# pip packages to cache for offline installation
+# One package per line. Comments start with #
+
+# ESP32 / Microcontroller tools
+esptool
+pyserial
+mpremote
+platformio
+
+# Web frameworks
+flask
+fastapi
+uvicorn
+
+# HTTP
+requests
+
+# Raspberry Pi
+RPi.GPIO
+adafruit-blinka
+gpiozero
+
+# Meshtastic
+meshtastic
+
+# Image processing
+Pillow
+
+# Scientific / Data
+numpy
+
+# SDR
+pyrtlsdr
+
+# MQTT
+paho-mqtt
+
+# Utilities
+click
+rich
+python-dotenv

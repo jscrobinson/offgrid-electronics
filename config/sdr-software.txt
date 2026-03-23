@@ -1,0 +1,34 @@
+# SDR Software download sources
+# This file is for reference — actual downloads are handled by download-sdr-software.sh
+# Format: NAME | PLATFORM | URL / SOURCE
+
+# RTL-SDR Drivers
+rtl-sdr | Win/Linux | https://github.com/osmocom/rtl-sdr | https://ftp.osmocom.org/binaries/windows/rtl-sdr/
+
+# SDR# (SDRSharp)
+sdrsharp | Windows | https://airspy.com/downloads/sdrsharp-x86.zip
+
+# GQRX
+gqrx | Linux | https://github.com/gqrx-sdr/gqrx/releases (AppImage)
+
+# CubicSDR
+cubicsdr | Win/Linux/Mac | https://github.com/cjcliffe/CubicSDR/releases
+
+# GNU Radio
+gnuradio | Win (radioconda) | https://github.com/ryanvolz/radioconda/releases
+gnuradio | Linux | apt install gnuradio
+
+# rtl_433 (ISM band decoder)
+rtl_433 | Win/Linux | https://github.com/merbanan/rtl_433/releases
+
+# dump1090 (ADS-B decoder)
+dump1090 | Linux | https://github.com/flightaware/dump1090
+
+# Multimon-NG (pager/AFSK decoder)
+multimon-ng | Linux | https://github.com/EliasOeworlds/multimon-ng
+
+# SDRTrunk (trunked radio)
+sdrtrunk | Win/Linux | https://github.com/DSheirer/sdrtrunk/releases
+
+# DSD+ (digital voice decoder)
+dsdplus | Windows | https://www.dsdplus.com

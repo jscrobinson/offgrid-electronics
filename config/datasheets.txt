@@ -1,0 +1,35 @@
+# Component datasheets to download
+# Format: FILENAME URL
+# Comments start with #
+
+# Microcontrollers
+esp32-datasheet.pdf https://www.espressif.com/sites/default/files/documentation/esp32_datasheet_en.pdf
+esp32-s3-datasheet.pdf https://www.espressif.com/sites/default/files/documentation/esp32-s3_datasheet_en.pdf
+esp32-c3-datasheet.pdf https://www.espressif.com/sites/default/files/documentation/esp32-c3_datasheet_en.pdf
+esp32-technical-reference.pdf https://www.espressif.com/sites/default/files/documentation/esp32_technical_reference_manual_en.pdf
+atmega328p-datasheet.pdf https://ww1.microchip.com/downloads/en/DeviceDoc/Atmel-7810-Automotive-Microcontrollers-ATmega328P_Datasheet.pdf
+
+# LoRa
+sx1276-datasheet.pdf https://semtech.my.salesforce.com/sfc/p/E0000000JelG/a/2R000000HUhK/X_K.bBjkGqR1JlosfRdEzpraTVOvxp.S6C2bS2mP_vE
+sx1262-datasheet.pdf https://semtech.my.salesforce.com/sfc/p/E0000000JelG/a/2R000000HT76/7Nka9W5WgugoZe.xwIHJy6ebj1hW8B.7EwRjlm6TY70
+
+# Power Management
+axp2101-datasheet.pdf https://github.com/Xinyuan-LilyGO/LilyGo-T-Beam/raw/master/datasheet/AXP2101_Datasheet.pdf
+tp4056-datasheet.pdf https://dlnmh9ip6v2uc.cloudfront.net/datasheets/Prototyping/TP4056.pdf
+
+# Sensors
+bme280-datasheet.pdf https://www.bosch-sensortec.com/media/boschsensortec/downloads/datasheets/bst-bme280-ds002.pdf
+ds18b20-datasheet.pdf https://datasheets.maximintegrated.com/en/ds/DS18B20.pdf
+mpu6050-datasheet.pdf https://invensense.tdk.com/wp-content/uploads/2015/02/MPU-6000-Datasheet1.pdf
+
+# Displays
+ssd1306-datasheet.pdf https://cdn-shop.adafruit.com/datasheets/SSD1306.pdf
+
+# GPS
+neo-6m-datasheet.pdf https://content.u-blox.com/sites/default/files/products/documents/NEO-6_DataSheet_(GPS.G6-HW-09005).pdf
+
+# Common Components
+lm7805-datasheet.pdf https://www.ti.com/lit/ds/symlink/lm340.pdf
+ams1117-datasheet.pdf http://www.advanced-monolithic.com/pdf/ds1117.pdf
+2n2222-datasheet.pdf https://www.onsemi.com/pdf/datasheet/p2n2222a-d.pdf
+irlz44n-datasheet.pdf https://www.infineon.com/dgdl/irlz44npbf.pdf?fileId=5546d462533600a40153567206892720
