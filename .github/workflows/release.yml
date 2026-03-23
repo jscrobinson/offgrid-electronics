@@ -6,43 +6,51 @@ on:
 
 permissions:
   contents: write
+  pull-requests: write
 
 jobs:
-  release:
+  release-please:
+    runs-on: ubuntu-latest
+    outputs:
+      release_created: ${{ steps.release.outputs.release_created }}
+      tag_name: ${{ steps.release.outputs.tag_name }}
+      upload_url: ${{ steps.release.outputs.upload_url }}
+    steps:
+      - name: Release Please
+        id: release
+        uses: googleapis/release-please-action@v4
+        with:
+          release-type: simple
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+  build-and-upload:
+    needs: release-please
+    if: needs.release-please.outputs.release_created == 'true'
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
 
-      - name: Conventional Changelog
-        id: changelog
-        uses: TriPSs/conventional-changelog-action@v5
+      - name: Set up Python
+        uses: actions/setup-python@v5
         with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          skip-version-file: "true"
-          output-file: "false"
-          skip-commit: "true"
-          skip-on-empty: "true"
+          python-version: "3.12"
+
+      - name: Build HTML documentation
+        run: python3 scripts/build-html.py
 
       - name: Create release zip
-        if: steps.changelog.outputs.skipped == 'false'
         run: |
-          VERSION="${{ steps.changelog.outputs.tag }}"
+          VERSION="${{ needs.release-please.outputs.tag_name }}"
           ZIP_NAME="offgrid-electronics-${VERSION}.zip"
           zip -r "$ZIP_NAME" \
-            docs/ scripts/ config/ static/ templates/ \
-            README.md LICENSE Makefile .gitignore \
+            docs/ build/html/ scripts/ config/ static/ templates/ \
+            START_HERE.html README.md LICENSE Makefile .gitignore \
             -x '*.git*'
           echo "ZIP_NAME=$ZIP_NAME" >> "$GITHUB_ENV"
-          echo "ZIP_PATH=$(pwd)/$ZIP_NAME" >> "$GITHUB_ENV"
 
-      - name: Create GitHub Release
-        if: steps.changelog.outputs.skipped == 'false'
+      - name: Upload release asset
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{ steps.changelog.outputs.tag }}
-          name: ${{ steps.changelog.outputs.tag }}
-          body: ${{ steps.changelog.outputs.clean_changelog }}
-          files: ${{ env.ZIP_PATH }}
+          tag_name: ${{ needs.release-please.outputs.tag_name }}
+          files: ${{ env.ZIP_NAME }}

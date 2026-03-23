@@ -39,7 +39,7 @@ log_ok "Templates copied"
 section "Copying downloaded content"
 
 # Always copy these
-for dir in docs toolchains editors sdr radio datasheets packages fonts; do
+for dir in docs html toolchains editors sdr radio datasheets packages fonts; do
     src="${BUILD_DIR}/${dir}"
     if [[ -d "$src" ]]; then
         log_info "Copying build/${dir}/..."
@@ -71,10 +71,14 @@ cp "${PROJECT_ROOT}/README.md" "${USB_MOUNT}/README.md"
 cp "${PROJECT_ROOT}/LICENSE" "${USB_MOUNT}/LICENSE"
 cp "${PROJECT_ROOT}/Makefile" "${USB_MOUNT}/Makefile"
 
-# --- Generate START_HERE.html ---
-section "Generating START_HERE.html"
-
-cat > "${USB_MOUNT}/START_HERE.html" << 'HTMLEOF'
+# --- Copy START_HERE.html from project root ---
+section "Copying START_HERE.html"
+if [[ -f "${PROJECT_ROOT}/START_HERE.html" ]]; then
+    cp "${PROJECT_ROOT}/START_HERE.html" "${USB_MOUNT}/START_HERE.html"
+    log_ok "START_HERE.html copied from project root"
+else
+    log_info "Generating START_HERE.html (fallback)"
+    cat > "${USB_MOUNT}/START_HERE.html" << 'HTMLEOF'
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -288,8 +292,8 @@ cat > "${USB_MOUNT}/START_HERE.html" << 'HTMLEOF'
 </body>
 </html>
 HTMLEOF
-
-log_ok "START_HERE.html generated"
+    log_ok "START_HERE.html generated"
+fi
 
 # --- Generate MANIFEST.txt ---
 section "Generating manifest"

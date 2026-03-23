@@ -1,4 +1,4 @@
-.PHONY: all docs mirror toolchains editors sdr chirp docker packages usb usb-lite verify size clean
+.PHONY: all docs html mirror toolchains editors sdr chirp docker packages usb usb-lite verify size clean
 
 SHELL := /bin/bash
 USB ?= /mnt/e
@@ -12,6 +12,10 @@ all: docs mirror toolchains editors sdr chirp docker packages datasheets
 docs:
 	@echo "Authored docs are in docs/ — no build step needed."
 	@echo "Run 'make mirror' to download external documentation."
+
+# Build HTML documentation site from docs/ markdown files
+html:
+	python3 $(SCRIPTS)/build-html.py
 
 # Mirror external documentation
 mirror:

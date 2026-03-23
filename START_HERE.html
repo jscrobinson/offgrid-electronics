@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tech Survival USB — Offgrid Electronics</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            line-height: 1.6; color: #e0e0e0; background: #1a1a2e;
+            display: flex; justify-content: center; align-items: center;
+            min-height: 100vh; padding: 20px; text-align: center;
+        }
+        .container { max-width: 600px; }
+        h1 { color: #00d4ff; font-size: 2em; margin-bottom: 10px; }
+        .subtitle { color: #888; font-size: 1.1em; margin-bottom: 30px; }
+        a { color: #00d4ff; text-decoration: none; }
+        a:hover { text-decoration: underline; }
+        .btn {
+            display: inline-block; padding: 14px 36px; background: #16213e;
+            border: 2px solid #00d4ff; border-radius: 8px; color: #00d4ff;
+            font-size: 1.15em; font-weight: 600; margin: 10px; transition: all 0.2s;
+        }
+        .btn:hover { background: #00d4ff; color: #1a1a2e; text-decoration: none; }
+        .fallback {
+            margin-top: 30px; padding: 20px; background: #2a2a1a;
+            border-left: 3px solid #ff9800; border-radius: 0 6px 6px 0;
+            text-align: left; font-size: 0.95em; display: none;
+        }
+        .fallback code {
+            background: #0a0a1a; padding: 2px 6px; border-radius: 3px; font-size: 0.9em;
+        }
+        .alt-links { margin-top: 25px; color: #888; font-size: 0.9em; }
+        .alt-links a { color: #7fdbca; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Tech Survival USB</h1>
+        <p class="subtitle">Offline documentation for electronics, radio, and mesh networking</p>
+
+        <a class="btn" id="html-link" href="build/html/index.html">Open HTML Documentation</a>
+
+        <div class="alt-links">
+            <p>Or browse the raw Markdown files: <a href="docs/index.md">docs/index.md</a></p>
+        </div>
+
+        <div class="fallback" id="fallback-msg">
+            <strong>HTML docs not found.</strong> The HTML documentation site has not been built yet.
+            <br><br>
+            To build it, run from the project root:
+            <br><br>
+            <code>make html</code>
+            <br><br>
+            Or directly:
+            <br><br>
+            <code>python3 scripts/build-html.py</code>
+            <br><br>
+            In the meantime, you can <a href="docs/index.md">browse the Markdown docs directly</a>.
+        </div>
+    </div>
+
+    <script>
+    // Check if build/html/index.html exists by trying to fetch it
+    (function() {
+        var link = document.getElementById('html-link');
+        var fallback = document.getElementById('fallback-msg');
+        var xhr = new XMLHttpRequest();
+        xhr.open('HEAD', 'build/html/index.html', true);
+        xhr.onload = function() {
+            if (xhr.status >= 200 && xhr.status < 400) {
+                // HTML docs exist — redirect automatically
+                window.location.href = 'build/html/index.html';
+            } else {
+                showFallback();
+            }
+        };
+        xhr.onerror = function() {
+            showFallback();
+        };
+        xhr.send();
+
+        function showFallback() {
+            link.style.display = 'none';
+            fallback.style.display = 'block';
+        }
+
+        // For file:// protocol, XHR may not work — show both options
+        if (window.location.protocol === 'file:') {
+            // Can't reliably check, so show the link and a note
+            link.style.display = 'inline-block';
+            fallback.style.display = 'none';
+        }
+    })();
+    </script>
+</body>
+</html>
