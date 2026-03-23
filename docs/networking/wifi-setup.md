@@ -1,220 +1,202 @@
 # WiFi Access Point Setup on Linux / Raspberry Pi
 
-Turn a Pi or Linux box into a WiFi access point with DHCP and optional internet sharing.
-
----
-
-## Overview
-
-Components needed:
-1. **hostapd** — Creates the WiFi access point
-2. **dnsmasq** — Provides DHCP (and optionally DNS) to connected clients
-3. **iptables** — NAT/forwarding if sharing internet from another interface
-4. **Captive portal** (optional) — Redirect clients to a local web page
+Turn a Raspberry Pi or Linux box into a WiFi access point with DHCP, DNS, and optional internet sharing (NAT). Essential for field deployments, sensor networks, and captive portals.
 
 ---
 
 ## Prerequisites
 
 ```bash
-# Check your WiFi adapter supports AP mode
-iw list | grep -A 10 "Supported interface modes"
-# Must show "AP" in the list
-
-# Install required packages
+# Required packages
 sudo apt update
-sudo apt install hostapd dnsmasq
+sudo apt install hostapd dnsmasq iptables
 
 # Stop services while configuring
 sudo systemctl stop hostapd
 sudo systemctl stop dnsmasq
-```
 
-### Which Interface?
+# Check WiFi hardware
+iw list
+# Look for "AP" in "Supported interface modes"
+# Not all WiFi adapters support AP mode
 
-```bash
-# List wireless interfaces
-iw dev
-# Typically: wlan0 (built-in), wlan1 (USB adapter)
-
-# If using Pi's built-in WiFi as AP and a USB adapter for internet:
-# wlan0 = AP (hostapd)
-# wlan1 or eth0 = internet uplink
-```
-
----
-
-## Static IP for the AP Interface
-
-Configure the AP interface with a static IP. This will be the gateway for connected clients.
-
-```bash
-sudo nano /etc/dhcpcd.conf
-```
-
-Add at the bottom:
-
-```
-interface wlan0
-    static ip_address=192.168.4.1/24
-    nohook wpa_supplicant
-```
-
-The `nohook wpa_supplicant` line prevents the interface from trying to connect to other networks.
-
-**Alternative (if using NetworkManager instead of dhcpcd):**
-
-```bash
-sudo nmcli con add type wifi ifname wlan0 con-name hotspot \
-    autoconnect no ssid "MyAP"
-sudo nmcli con modify hotspot 802-11-wireless.mode ap \
-    802-11-wireless.band bg \
-    ipv4.method shared \
-    ipv4.addresses 192.168.4.1/24
-sudo nmcli con modify hotspot wifi-sec.key-mgmt wpa-psk \
-    wifi-sec.psk "YourPassword"
-sudo nmcli con up hotspot
-# NetworkManager handles hostapd+dnsmasq automatically in this case
+# Check interface names
+ip link show
+# Common: wlan0 (built-in), wlan1 (USB dongle)
 ```
 
 ---
 
 ## hostapd Configuration
 
-```bash
-sudo nano /etc/hostapd/hostapd.conf
-```
+hostapd creates the WiFi access point.
 
-### Basic WPA2 Access Point
+### Basic 2.4GHz AP
+
+Create `/etc/hostapd/hostapd.conf`:
 
 ```ini
 # Interface and driver
 interface=wlan0
 driver=nl80211
 
-# Network name
-ssid=OffGrid-AP
+# Network name and channel
+ssid=FieldStation
+channel=7
+hw_mode=g
 
-# Band and channel
-hw_mode=g              # g = 2.4GHz, a = 5GHz
-channel=7              # 1, 6, 11 are non-overlapping on 2.4GHz
-ieee80211n=1           # Enable 802.11n (HT)
-wmm_enabled=0          # QoS (disable for simplicity)
+# 802.11n support (better throughput)
+ieee80211n=1
+wmm_enabled=1
+
+# Security
+auth_algs=1
+wpa=2
+wpa_passphrase=YourSecurePassword123
+wpa_key_mgmt=WPA-PSK
+rsn_pairwise=CCMP
+
+# Logging
+logger_syslog=-1
+logger_syslog_level=2
 
 # Country code (required for proper channel/power regulation)
 country_code=US
 
-# Security
-macaddr_acl=0          # 0 = accept all MACs
-auth_algs=1            # 1 = WPA
-wpa=2                  # WPA2 only
-wpa_passphrase=YourSecurePassword
-wpa_key_mgmt=WPA-PSK
-wpa_pairwise=TKIP
-rsn_pairwise=CCMP
+# Max clients
+max_num_sta=10
 
-# Optional: Hide SSID
-#ignore_broadcast_ssid=1
-
-# Optional: Limit connected clients
-#max_num_sta=10
+# Isolate clients from each other (security)
+# ap_isolate=1
 ```
 
-### 5 GHz Access Point (802.11ac)
+### 5GHz AP (if hardware supports it)
 
 ```ini
 interface=wlan0
 driver=nl80211
-ssid=OffGrid-5G
+ssid=FieldStation-5G
 hw_mode=a
 channel=36
 ieee80211n=1
 ieee80211ac=1
+wmm_enabled=1
+auth_algs=1
+wpa=2
+wpa_passphrase=YourSecurePassword123
+wpa_key_mgmt=WPA-PSK
+rsn_pairwise=CCMP
+country_code=US
+
+# 802.11ac (WiFi 5) settings
 ht_capab=[HT40+][SHORT-GI-20][SHORT-GI-40]
 vht_oper_chwidth=1
 vht_oper_centr_freq_seg0_idx=42
-country_code=US
-wpa=2
-wpa_passphrase=YourSecurePassword
-wpa_key_mgmt=WPA-PSK
-rsn_pairwise=CCMP
 ```
 
-**Note:** Not all WiFi adapters support 5 GHz AP mode. Check with `iw list`.
-
-### Open Access Point (No Password)
+### Open Network (no password — captive portal use)
 
 ```ini
 interface=wlan0
 driver=nl80211
-ssid=OffGrid-Open
-hw_mode=g
+ssid=OpenNetwork
 channel=7
-country_code=US
+hw_mode=g
+ieee80211n=1
+wmm_enabled=1
+auth_algs=1
 # No wpa settings = open network
 ```
 
-### Tell hostapd Where the Config Is
+### Tell hostapd where to find the config
 
 ```bash
+# Edit /etc/default/hostapd
 sudo nano /etc/default/hostapd
-```
+# Set: DAEMON_CONF="/etc/hostapd/hostapd.conf"
 
-Set:
-```
-DAEMON_CONF="/etc/hostapd/hostapd.conf"
+# Or for systemd-based setup
+sudo systemctl unmask hostapd
 ```
 
 ---
 
 ## dnsmasq Configuration (DHCP + DNS)
 
-Back up and replace the default config:
+dnsmasq provides DHCP (automatic IP assignment) and DNS (name resolution) for clients connecting to your AP.
+
+### Static IP for the AP Interface
 
 ```bash
-sudo mv /etc/dnsmasq.conf /etc/dnsmasq.conf.orig
+# Option 1: /etc/dhcpcd.conf (Raspberry Pi OS)
+# Add to /etc/dhcpcd.conf:
+interface wlan0
+    static ip_address=192.168.4.1/24
+    nohook wpa_supplicant
+
+# Option 2: systemd-networkd or /etc/network/interfaces
+# /etc/network/interfaces:
+auto wlan0
+iface wlan0 inet static
+    address 192.168.4.1
+    netmask 255.255.255.0
+```
+
+### dnsmasq Configuration
+
+Backup the default config and create a new one:
+
+```bash
+sudo mv /etc/dnsmasq.conf /etc/dnsmasq.conf.backup
 sudo nano /etc/dnsmasq.conf
 ```
 
+`/etc/dnsmasq.conf`:
+
 ```ini
-# Only listen on AP interface
+# Listen only on the AP interface
 interface=wlan0
-listen-address=192.168.4.1
+bind-interfaces
 
-# Don't use /etc/resolv.conf
-no-resolv
-
-# Upstream DNS servers (for when internet is available)
-server=8.8.8.8
-server=1.1.1.1
-
-# DHCP range
+# DHCP range and lease time
 dhcp-range=192.168.4.10,192.168.4.100,255.255.255.0,24h
 
-# Default gateway
-dhcp-option=3,192.168.4.1
+# Default gateway (this device)
+dhcp-option=option:router,192.168.4.1
 
-# DNS server
-dhcp-option=6,192.168.4.1
-
-# Static DHCP leases (optional)
-#dhcp-host=aa:bb:cc:dd:ee:ff,sensor-node,192.168.4.50
+# DNS servers to offer clients
+dhcp-option=option:dns-server,192.168.4.1,8.8.8.8
 
 # Domain
 domain=local
+local=/local/
 
-# Log DHCP requests (useful for debugging)
+# Static DHCP leases (by MAC address)
+dhcp-host=dc:a6:32:xx:xx:xx,sensor-node-1,192.168.4.50
+dhcp-host=b8:27:eb:xx:xx:xx,sensor-node-2,192.168.4.51
+
+# Local hostnames
+address=/dashboard.local/192.168.4.1
+address=/api.local/192.168.4.1
+
+# Logging
+log-queries
 log-dhcp
+log-facility=/var/log/dnsmasq.log
 
-# Cache DNS queries
+# Upstream DNS (when connected to internet)
+server=1.1.1.1
+server=8.8.8.8
+
+# Cache size
 cache-size=1000
 ```
 
 ---
 
-## IP Forwarding and NAT (Internet Sharing)
+## Enabling IP Forwarding and NAT
 
-If you want clients connected to the AP to access the internet through another interface (e.g., eth0 for Ethernet or wlan1 for USB WiFi):
+If the Pi has internet via ethernet (eth0) and you want to share it with WiFi clients:
 
 ### Enable IP Forwarding
 
@@ -223,194 +205,55 @@ If you want clients connected to the AP to access the internet through another i
 sudo sysctl -w net.ipv4.ip_forward=1
 
 # Permanent
-sudo nano /etc/sysctl.conf
-# Uncomment: net.ipv4.ip_forward=1
-sudo sysctl -p
+echo "net.ipv4.ip_forward=1" | sudo tee -a /etc/sysctl.d/99-ipforward.conf
+sudo sysctl -p /etc/sysctl.d/99-ipforward.conf
 ```
 
-### iptables NAT Rules
+### iptables NAT Masquerade
 
 ```bash
-# Replace eth0 with your internet-connected interface
+# Enable NAT: traffic from wlan0 clients gets masqueraded through eth0
 sudo iptables -t nat -A POSTROUTING -o eth0 -j MASQUERADE
-sudo iptables -A FORWARD -i eth0 -o wlan0 -m state --state RELATED,ESTABLISHED -j ACCEPT
-sudo iptables -A FORWARD -i wlan0 -o eth0 -j ACCEPT
 
-# Save rules (persist across reboots)
+# Allow forwarding between interfaces
+sudo iptables -A FORWARD -i wlan0 -o eth0 -j ACCEPT
+sudo iptables -A FORWARD -i eth0 -o wlan0 -m state --state RELATED,ESTABLISHED -j ACCEPT
+
+# Save iptables rules (persist across reboot)
+sudo sh -c "iptables-save > /etc/iptables.ipv4.nat"
+
+# Restore on boot — add to /etc/rc.local before "exit 0":
+iptables-restore < /etc/iptables.ipv4.nat
+
+# Or use iptables-persistent
 sudo apt install iptables-persistent
 sudo netfilter-persistent save
 ```
 
 ---
 
-## Start Everything
+## Starting Everything
 
 ```bash
-sudo systemctl unmask hostapd
+# Start services
+sudo systemctl start dhcpcd       # or networking
+sudo systemctl start dnsmasq
+sudo systemctl start hostapd
+
+# Enable on boot
 sudo systemctl enable hostapd
 sudo systemctl enable dnsmasq
 
-sudo systemctl restart dhcpcd
-sudo systemctl start hostapd
-sudo systemctl start dnsmasq
-```
-
-### Verify
-
-```bash
-# Check hostapd status
+# Check status
 sudo systemctl status hostapd
-
-# Check dnsmasq status
 sudo systemctl status dnsmasq
 
-# Check the AP interface has the static IP
-ip addr show wlan0
-
-# Check connected clients
-# DHCP leases:
+# View connected clients
 cat /var/lib/misc/dnsmasq.leases
-# WiFi clients:
+# Or:
+arp -a
 iw dev wlan0 station dump
 ```
-
----
-
-## Captive Portal
-
-Redirect all HTTP traffic from connected clients to a local web page.
-
-### Using iptables + nginx
-
-```bash
-sudo apt install nginx
-```
-
-**iptables redirect (add before NAT rules):**
-```bash
-# Redirect all port 80 traffic to local web server
-sudo iptables -t nat -A PREROUTING -i wlan0 -p tcp --dport 80 -j REDIRECT --to-port 80
-
-# Redirect DNS to local dnsmasq
-sudo iptables -t nat -A PREROUTING -i wlan0 -p udp --dport 53 -j REDIRECT --to-port 53
-```
-
-**dnsmasq — resolve all domains to AP IP:**
-Add to `/etc/dnsmasq.conf`:
-```ini
-# Redirect all DNS queries to the AP
-address=/#/192.168.4.1
-```
-
-**nginx config** (`/etc/nginx/sites-available/captive`):
-```nginx
-server {
-    listen 80 default_server;
-    server_name _;
-
-    root /var/www/captive;
-    index index.html;
-
-    # Captive portal detection endpoints
-    location /generate_204 { return 302 http://192.168.4.1/; }  # Android
-    location /hotspot-detect.html { return 302 http://192.168.4.1/; }  # Apple
-    location /connecttest.txt { return 302 http://192.168.4.1/; }  # Windows
-    location /ncsi.txt { return 302 http://192.168.4.1/; }  # Windows
-
-    location / {
-        try_files $uri $uri/ /index.html;
-    }
-}
-```
-
-```bash
-sudo ln -s /etc/nginx/sites-available/captive /etc/nginx/sites-enabled/
-sudo rm /etc/nginx/sites-enabled/default
-sudo systemctl restart nginx
-```
-
-**Create the landing page:**
-```bash
-sudo mkdir -p /var/www/captive
-sudo nano /var/www/captive/index.html
-```
-
-```html
-<!DOCTYPE html>
-<html>
-<head><title>OffGrid Network</title></head>
-<body>
-    <h1>Welcome to the OffGrid Network</h1>
-    <p>You are connected to a local network.</p>
-    <p><a href="/docs/">Browse Documentation</a></p>
-</body>
-</html>
-```
-
-### Using nodogsplash (Simpler Alternative)
-
-```bash
-sudo apt install nodogsplash
-
-sudo nano /etc/nodogsplash/nodogsplash.conf
-```
-
-```ini
-GatewayInterface wlan0
-GatewayAddress 192.168.4.1
-MaxClients 50
-AuthIdleTimeout 600
-SplashPage splash.html
-```
-
-```bash
-sudo systemctl enable nodogsplash
-sudo systemctl start nodogsplash
-```
-
----
-
-## Simultaneous AP + Client (Tricky)
-
-Some WiFi chips support running AP and client (station) mode simultaneously:
-
-```bash
-# Check if supported
-iw list | grep -A 5 "valid interface combinations"
-# Look for: #{ AP, managed } -- means one AP + one client
-
-# Create virtual interface
-sudo iw dev wlan0 interface add wlan0_ap type __ap
-
-# wlan0 connects to upstream WiFi (station mode)
-# wlan0_ap runs the access point (AP mode)
-```
-
-This is unreliable on many adapters. A USB WiFi adapter dedicated to AP mode is more stable.
-
----
-
-## Troubleshooting
-
-| Problem                        | Check                                              |
-|--------------------------------|----------------------------------------------------|
-| hostapd fails to start         | `journalctl -u hostapd` — check for driver/channel issues |
-| No SSID visible                | Check `rfkill list` — unblock with `rfkill unblock wifi` |
-| Clients connect but no DHCP    | Check dnsmasq is running, interface matches         |
-| Clients get IP but no internet | Check ip_forward=1, iptables NAT, upstream interface|
-| Channel not allowed             | Set correct `country_code` in hostapd.conf         |
-| "Could not connect to wpa_supplicant" | Add `nohook wpa_supplicant` to dhcpcd.conf  |
-| hostapd: "nl80211: Could not configure driver mode" | Driver doesn't support AP mode, try different adapter |
-
-### Recommended USB WiFi Adapters for AP Mode
-
-Chipsets with good Linux AP mode support:
-- **Ralink RT5370** — Very common, well-supported
-- **Realtek RTL8188CUS** — Widely available, cheap
-- **Atheros AR9271** — Excellent Linux support, also works for monitoring
-- **MediaTek MT7612U** — 802.11ac, dual band
-
-Avoid: Realtek RTL88x2BU (driver issues), Intel (generally no AP mode).
 
 ---
 
@@ -418,62 +261,304 @@ Avoid: Realtek RTL88x2BU (driver issues), Intel (generally no AP mode).
 
 ```bash
 #!/bin/bash
-# Quick AP setup script for Raspberry Pi
-# Run as root
+# setup-ap.sh — Configure Raspberry Pi as WiFi Access Point
+set -euo pipefail
 
-INTERFACE="wlan0"
-SSID="OffGrid-AP"
-PASSWORD="changeme123"
-IP="192.168.4.1"
+IFACE="wlan0"
+AP_IP="192.168.4.1"
+AP_SSID="FieldStation"
+AP_PASS="YourSecurePassword123"
 DHCP_START="192.168.4.10"
 DHCP_END="192.168.4.100"
+CHANNEL=7
+INTERNET_IFACE="eth0"  # set to "" if no internet sharing
 
-apt update && apt install -y hostapd dnsmasq
+echo "=== Installing packages ==="
+sudo apt update
+sudo apt install -y hostapd dnsmasq
 
-systemctl stop hostapd dnsmasq
+echo "=== Stopping services ==="
+sudo systemctl stop hostapd 2>/dev/null || true
+sudo systemctl stop dnsmasq 2>/dev/null || true
 
-# Static IP
-cat >> /etc/dhcpcd.conf << EOF
+echo "=== Configuring static IP ==="
+if ! grep -q "interface $IFACE" /etc/dhcpcd.conf; then
+    cat <<EOF | sudo tee -a /etc/dhcpcd.conf
 
-interface ${INTERFACE}
-    static ip_address=${IP}/24
+interface $IFACE
+    static ip_address=${AP_IP}/24
     nohook wpa_supplicant
 EOF
+fi
 
-# hostapd
-cat > /etc/hostapd/hostapd.conf << EOF
-interface=${INTERFACE}
+echo "=== Configuring hostapd ==="
+cat <<EOF | sudo tee /etc/hostapd/hostapd.conf
+interface=$IFACE
 driver=nl80211
-ssid=${SSID}
+ssid=$AP_SSID
 hw_mode=g
-channel=7
-wmm_enabled=0
-macaddr_acl=0
+channel=$CHANNEL
+ieee80211n=1
+wmm_enabled=1
 auth_algs=1
 wpa=2
-wpa_passphrase=${PASSWORD}
+wpa_passphrase=$AP_PASS
 wpa_key_mgmt=WPA-PSK
 rsn_pairwise=CCMP
 country_code=US
 EOF
 
-echo 'DAEMON_CONF="/etc/hostapd/hostapd.conf"' > /etc/default/hostapd
+sudo sed -i 's|^#DAEMON_CONF=.*|DAEMON_CONF="/etc/hostapd/hostapd.conf"|' \
+    /etc/default/hostapd
 
-# dnsmasq
-mv /etc/dnsmasq.conf /etc/dnsmasq.conf.orig 2>/dev/null
-cat > /etc/dnsmasq.conf << EOF
-interface=${INTERFACE}
+echo "=== Configuring dnsmasq ==="
+sudo mv /etc/dnsmasq.conf /etc/dnsmasq.conf.backup 2>/dev/null || true
+cat <<EOF | sudo tee /etc/dnsmasq.conf
+interface=$IFACE
+bind-interfaces
 dhcp-range=${DHCP_START},${DHCP_END},255.255.255.0,24h
-dhcp-option=3,${IP}
-dhcp-option=6,${IP}
-no-resolv
+dhcp-option=option:router,$AP_IP
+dhcp-option=option:dns-server,$AP_IP
+server=1.1.1.1
 server=8.8.8.8
+domain=local
+cache-size=1000
 EOF
 
-systemctl unmask hostapd
-systemctl enable hostapd dnsmasq
-systemctl restart dhcpcd hostapd dnsmasq
+if [[ -n "$INTERNET_IFACE" ]]; then
+    echo "=== Enabling IP forwarding and NAT ==="
+    echo "net.ipv4.ip_forward=1" | sudo tee /etc/sysctl.d/99-ipforward.conf
+    sudo sysctl -w net.ipv4.ip_forward=1
 
-echo "AP '${SSID}' should now be visible."
-echo "Connect and access ${IP} from a browser."
+    sudo iptables -t nat -A POSTROUTING -o "$INTERNET_IFACE" -j MASQUERADE
+    sudo iptables -A FORWARD -i "$IFACE" -o "$INTERNET_IFACE" -j ACCEPT
+    sudo iptables -A FORWARD -i "$INTERNET_IFACE" -o "$IFACE" \
+        -m state --state RELATED,ESTABLISHED -j ACCEPT
+    sudo sh -c "iptables-save > /etc/iptables.ipv4.nat"
+
+    # Restore on boot
+    if ! grep -q "iptables-restore" /etc/rc.local 2>/dev/null; then
+        sudo sed -i '/^exit 0/i iptables-restore < /etc/iptables.ipv4.nat' \
+            /etc/rc.local
+    fi
+fi
+
+echo "=== Starting services ==="
+sudo systemctl unmask hostapd
+sudo systemctl enable hostapd dnsmasq
+sudo systemctl restart dhcpcd
+sudo systemctl start hostapd dnsmasq
+
+echo "=== Done! ==="
+echo "SSID: $AP_SSID"
+echo "Password: $AP_PASS"
+echo "AP IP: $AP_IP"
+echo "DHCP Range: $DHCP_START - $DHCP_END"
+```
+
+---
+
+## Captive Portal
+
+A captive portal redirects all HTTP traffic to a local page. Useful for information displays or device registration in the field.
+
+### Simple Captive Portal with dnsmasq + Python
+
+1. Redirect all DNS to the AP:
+
+Add to `/etc/dnsmasq.conf`:
+```ini
+# Redirect ALL DNS queries to the AP (captive portal)
+address=/#/192.168.4.1
+```
+
+2. Redirect HTTP with iptables:
+
+```bash
+# Redirect all port 80 traffic to local web server
+sudo iptables -t nat -A PREROUTING -i wlan0 -p tcp --dport 80 \
+    -j DNAT --to-destination 192.168.4.1:80
+
+# Redirect HTTPS to local (browsers will show cert warning)
+sudo iptables -t nat -A PREROUTING -i wlan0 -p tcp --dport 443 \
+    -j DNAT --to-destination 192.168.4.1:80
+```
+
+3. Run a simple web server:
+
+```python
+#!/usr/bin/env python3
+# captive_portal.py
+from http.server import HTTPServer, SimpleHTTPRequestHandler
+import os
+
+class CaptiveHandler(SimpleHTTPRequestHandler):
+    def do_GET(self):
+        # Android captive portal detection
+        if self.path in ('/generate_204', '/gen_204'):
+            self.send_response(302)
+            self.send_header('Location', 'http://192.168.4.1/')
+            self.end_headers()
+            return
+
+        # Apple captive portal detection
+        if self.path == '/hotspot-detect.html':
+            self.send_response(302)
+            self.send_header('Location', 'http://192.168.4.1/')
+            self.end_headers()
+            return
+
+        # Serve portal page
+        self.send_response(200)
+        self.send_header('Content-Type', 'text/html')
+        self.end_headers()
+        self.wfile.write(b"""
+        <html><body>
+        <h1>Field Station Portal</h1>
+        <p>Welcome to the field network.</p>
+        <ul>
+          <li><a href="http://192.168.4.1:8080">Sensor Dashboard</a></li>
+          <li><a href="http://192.168.4.1:3000">Data API</a></li>
+        </ul>
+        </body></html>
+        """)
+
+server = HTTPServer(('0.0.0.0', 80), CaptiveHandler)
+print("Captive portal running on port 80")
+server.serve_forever()
+```
+
+---
+
+## Dual-Band Setup (2.4GHz + 5GHz)
+
+If you have two WiFi interfaces (built-in + USB dongle), run both bands:
+
+```bash
+# Check interfaces
+iw dev
+# Should show wlan0 and wlan1
+
+# hostapd config for 2.4GHz (wlan0)
+# /etc/hostapd/hostapd-2g.conf
+interface=wlan0
+ssid=FieldStation
+hw_mode=g
+channel=7
+# ... (same as above)
+
+# hostapd config for 5GHz (wlan1)
+# /etc/hostapd/hostapd-5g.conf
+interface=wlan1
+ssid=FieldStation-5G
+hw_mode=a
+channel=36
+ieee80211ac=1
+# ... (same as 5GHz config above)
+
+# Run both
+sudo hostapd /etc/hostapd/hostapd-2g.conf &
+sudo hostapd /etc/hostapd/hostapd-5g.conf &
+
+# Configure both interfaces with static IPs
+# wlan0: 192.168.4.1/24
+# wlan1: 192.168.5.1/24
+
+# dnsmasq serves DHCP on both
+# /etc/dnsmasq.conf:
+interface=wlan0
+interface=wlan1
+dhcp-range=wlan0,192.168.4.10,192.168.4.100,24h
+dhcp-range=wlan1,192.168.5.10,192.168.5.100,24h
+```
+
+---
+
+## Common Issues and Fixes
+
+### hostapd fails to start
+
+```bash
+# Check logs
+sudo journalctl -u hostapd -n 50
+
+# Common fixes:
+# 1. Kill conflicting processes
+sudo airmon-ng check kill
+# or
+sudo killall wpa_supplicant
+
+# 2. Interface not available
+sudo rfkill unblock wifi
+sudo ip link set wlan0 up
+
+# 3. Driver doesn't support AP mode
+iw list | grep -A 10 "Supported interface modes"
+# Must show "AP"
+
+# 4. Country code not set
+sudo raspi-config  # Localization > WLAN Country
+# Or add to hostapd.conf: country_code=US
+```
+
+### Channel conflicts
+
+```bash
+# Scan for nearby APs and their channels
+sudo iwlist wlan0 scan | grep -E "Channel|ESSID"
+
+# Pick a non-overlapping channel:
+# 2.4GHz: use 1, 6, or 11 (non-overlapping)
+# 5GHz: channels 36, 40, 44, 48 (UNII-1, usually OK indoors)
+```
+
+### Clients connect but no internet
+
+```bash
+# Check IP forwarding
+cat /proc/sys/net/ipv4/ip_forward
+# Should be 1
+
+# Check iptables NAT
+sudo iptables -t nat -L -v
+
+# Check if Pi has internet
+ping 8.8.8.8
+
+# Check DNS
+nslookup google.com 192.168.4.1
+```
+
+### WiFi adapter recommendations for AP mode
+
+- **Raspberry Pi built-in** — works, limited range
+- **TP-Link TL-WN722N v1** — great range, well-supported (v1 only, not v2/v3)
+- **Alfa AWUS036ACH** — dual-band, high power, excellent for field use
+- **Alfa AWUS036ACHM** — similar, good Linux support
+- **Panda PAU09** — dual-band, good Linux compatibility
+
+Check chipset before buying. Well-supported chipsets: Atheros AR9271, Ralink RT5370, Realtek RTL8812AU.
+
+---
+
+## Monitoring
+
+```bash
+# Connected clients
+iw dev wlan0 station dump
+
+# DHCP leases
+cat /var/lib/misc/dnsmasq.leases
+
+# Traffic monitoring
+sudo apt install iftop
+sudo iftop -i wlan0
+
+# Bandwidth test between AP and client
+# Install iperf3 on both:
+sudo apt install iperf3
+# On AP:
+iperf3 -s
+# On client:
+iperf3 -c 192.168.4.1
 ```

@@ -1,124 +1,143 @@
 # SSH Reference
 
-Connecting, keys, tunneling, file transfer, and hardening.
+Secure Shell (SSH) for remote access, file transfer, tunneling, and security. Covers OpenSSH client and server.
 
 ---
 
-## Basic Connection
+## Connecting
 
 ```bash
+# Basic connection
 ssh user@hostname
-ssh user@192.168.1.100
-ssh -p 2222 user@host              # Non-standard port
-ssh user@host command               # Run command and exit
-ssh -v user@host                    # Verbose (debug connection issues)
-ssh -vvv user@host                  # Extra verbose
+ssh user@192.168.1.50
+ssh pi@raspberrypi.local
+
+# Specify port
+ssh -p 2222 user@host
+
+# Verbose (debugging connection issues)
+ssh -v user@host     # verbose
+ssh -vv user@host    # more verbose
+ssh -vvv user@host   # maximum verbose
+
+# Run a single command
+ssh user@host "uptime"
+ssh user@host "df -h && free -m"
+
+# Run command with sudo
+ssh user@host "sudo systemctl restart nginx"
+
+# X11 forwarding (run GUI apps remotely)
+ssh -X user@host
+# Then run: firefox, gedit, etc. — they display on your screen
 ```
 
 ---
 
-## Key Generation
+## SSH Key Authentication
 
-### Ed25519 (Recommended)
+Key-based auth is more secure than passwords and enables passwordless login.
 
-```bash
-ssh-keygen -t ed25519 -C "your_email@example.com"
-# Saves to ~/.ssh/id_ed25519 (private) and ~/.ssh/id_ed25519.pub (public)
-# Enter a passphrase when prompted (recommended)
-```
-
-### RSA (Broader Compatibility)
+### Generate a Key Pair
 
 ```bash
-ssh-keygen -t rsa -b 4096 -C "your_email@example.com"
-# Saves to ~/.ssh/id_rsa and ~/.ssh/id_rsa.pub
+# Ed25519 (recommended — modern, fast, secure)
+ssh-keygen -t ed25519 -C "user@machine"
+
+# RSA (wider compatibility with older systems)
+ssh-keygen -t rsa -b 4096 -C "user@machine"
+
+# You'll be prompted for:
+# - File location (default: ~/.ssh/id_ed25519)
+# - Passphrase (recommended: adds protection if key is stolen)
 ```
 
-### Key Types Comparison
-
-| Type      | Key Size    | Security | Speed   | Compatibility |
-|-----------|-------------|----------|---------|---------------|
-| ed25519   | 256-bit     | Excellent| Fast    | OpenSSH 6.5+  |
-| rsa       | 4096-bit    | Good     | Slower  | Universal      |
-| ecdsa     | 256/384/521 | Good     | Fast    | OpenSSH 5.7+  |
-
-**Use ed25519 unless you need compatibility with very old systems.**
+This creates two files:
+- `~/.ssh/id_ed25519` — private key (NEVER share this)
+- `~/.ssh/id_ed25519.pub` — public key (safe to share)
 
 ### Copy Public Key to Server
 
 ```bash
-# Automatic method (recommended)
+# Automated method (recommended)
 ssh-copy-id user@host
 ssh-copy-id -i ~/.ssh/id_ed25519.pub user@host
 
-# Manual method
-cat ~/.ssh/id_ed25519.pub | ssh user@host 'mkdir -p ~/.ssh && cat >> ~/.ssh/authorized_keys'
+# Manual method (if ssh-copy-id not available)
+cat ~/.ssh/id_ed25519.pub | ssh user@host "mkdir -p ~/.ssh && chmod 700 ~/.ssh && cat >> ~/.ssh/authorized_keys && chmod 600 ~/.ssh/authorized_keys"
 
-# Or on the server, manually add to:
-# ~/.ssh/authorized_keys
+# Or copy and paste the content of id_ed25519.pub into:
+# ~/.ssh/authorized_keys on the remote server
 ```
 
-### File Permissions (Critical)
+### File Permissions (critical — SSH will refuse if wrong)
 
 ```bash
 chmod 700 ~/.ssh
-chmod 600 ~/.ssh/id_ed25519          # Private key
-chmod 644 ~/.ssh/id_ed25519.pub      # Public key
-chmod 600 ~/.ssh/authorized_keys
-chmod 600 ~/.ssh/config
+chmod 600 ~/.ssh/id_ed25519           # private key
+chmod 644 ~/.ssh/id_ed25519.pub       # public key
+chmod 600 ~/.ssh/authorized_keys      # on server
+chmod 600 ~/.ssh/config               # config file
 ```
-
-Incorrect permissions = SSH refuses to use the key silently.
 
 ---
 
-## SSH Config File
+## SSH Config File (~/.ssh/config)
 
-`~/.ssh/config` saves you from typing long commands.
+Simplify connections with aliases and per-host settings.
 
 ```
-# Default settings for all hosts
-Host *
-    ServerAliveInterval 60
-    ServerAliveCountMax 3
-    AddKeysToAgent yes
+# ~/.ssh/config
 
-# Raspberry Pi
-Host pi
-    HostName 192.168.1.50
+# Raspberry Pi in the field
+Host pi-field
+    HostName 192.168.4.10
     User pi
-    Port 22
     IdentityFile ~/.ssh/id_ed25519
+    Port 22
 
-# Jump through bastion
+# Jump through a bastion host
 Host internal-server
-    HostName 10.0.0.5
+    HostName 10.0.1.50
     User admin
     ProxyJump bastion
 
 Host bastion
     HostName bastion.example.com
-    User jump-user
-    IdentityFile ~/.ssh/id_ed25519_work
+    User jumpuser
+    IdentityFile ~/.ssh/id_ed25519_bastion
+    Port 2222
 
-# GitHub
+# Development server
+Host dev
+    HostName dev.example.com
+    User deploy
+    IdentityFile ~/.ssh/id_ed25519
+    ForwardAgent yes
+    LocalForward 5432 localhost:5432
+    ServerAliveInterval 60
+    ServerAliveCountMax 3
+
+# GitHub (useful if SSH port 22 is blocked)
 Host github.com
-    HostName github.com
+    HostName ssh.github.com
+    Port 443
     User git
     IdentityFile ~/.ssh/id_ed25519
 
-# Wildcard for lab machines
-Host lab-*
-    User root
-    IdentityFile ~/.ssh/id_ed25519_lab
-    StrictHostKeyChecking no        # Only for trusted LANs
-    UserKnownHostsFile /dev/null
+# Wildcard — apply to all hosts
+Host *
+    ServerAliveInterval 60
+    ServerAliveCountMax 3
+    AddKeysToAgent yes
+    IdentitiesOnly yes
 ```
 
-**Usage after config:**
+Usage:
 ```bash
-ssh pi                   # Instead of: ssh pi@192.168.1.50
-ssh internal-server      # Automatically jumps through bastion
+ssh pi-field        # instead of: ssh -i ~/.ssh/id_ed25519 pi@192.168.4.10
+ssh dev             # auto-forwards port 5432
+ssh internal-server # auto-jumps through bastion
 ```
 
 ---
@@ -127,78 +146,58 @@ ssh internal-server      # Automatically jumps through bastion
 
 ### Local Port Forward (-L)
 
-Forward a local port to a remote service. Access remote_host:remote_port as localhost:local_port.
+Access a remote service through a local port. Traffic flows: local port -> SSH server -> target.
 
 ```bash
-ssh -L local_port:target_host:target_port user@ssh_server
-
-# Example: Access remote web server at localhost:8080
+# Forward local port 8080 to remote's localhost:80
 ssh -L 8080:localhost:80 user@remote-server
-# Now http://localhost:8080 → remote server's port 80
+# Now: http://localhost:8080 reaches remote's web server
 
-# Example: Access a database behind a firewall
-ssh -L 3307:db-server:3306 user@bastion
-# Now mysql -h 127.0.0.1 -P 3307 → db-server:3306
+# Forward to a third-party host through the SSH server
+ssh -L 5432:db-server:5432 user@bastion
+# Now: localhost:5432 reaches db-server:5432 via bastion
 
-# Example: Access a remote Pi's VNC
-ssh -L 5901:localhost:5900 pi@192.168.1.50
-# Now VNC to localhost:5901
+# Multiple forwards
+ssh -L 8080:localhost:80 -L 5432:db:5432 user@host
+
+# Background tunnel (no shell)
+ssh -fNL 8080:localhost:80 user@host
+# -f = background after auth
+# -N = no remote command
 ```
 
-**Diagram:**
-```
-[Your PC:8080] ──SSH──> [SSH Server] ──> [Target:80]
-                 Encrypted tunnel
-```
+Use case: Access a web dashboard on a Pi that's only on a private network.
 
 ### Remote Port Forward (-R)
 
-Expose a local service to the remote network. Make remote_host:remote_port forward to your local machine.
+Expose a local service through the remote server. Traffic flows: remote port -> SSH client -> target.
 
 ```bash
-ssh -R remote_port:target_host:target_port user@ssh_server
+# Make local port 3000 accessible on remote's port 8080
+ssh -R 8080:localhost:3000 user@remote-server
+# Now: remote-server:8080 reaches your local :3000
 
-# Example: Expose local web server to the internet via a VPS
-ssh -R 8080:localhost:3000 user@vps.example.com
-# Now vps.example.com:8080 → your localhost:3000
-
-# Example: Let remote server access your local service
-ssh -R 9090:localhost:9090 user@remote-server
+# Expose a local device through a public server
+ssh -R 80:192.168.1.50:80 user@public-server
+# Now: public-server:80 reaches your local device at 192.168.1.50:80
 ```
 
-**Note:** By default, remote forwards only bind to 127.0.0.1 on the server. To bind to all interfaces, add `GatewayPorts yes` to the server's `sshd_config`.
+Use case: Make a local dev server accessible from the internet through a VPS.
 
-### Dynamic Port Forward / SOCKS Proxy (-D)
+### Dynamic Port Forward (-D) — SOCKS Proxy
 
-Create a SOCKS5 proxy through the SSH tunnel. All traffic routed through the proxy goes through the SSH server.
+Create a SOCKS proxy that tunnels all traffic through the SSH server.
 
 ```bash
 ssh -D 1080 user@remote-server
+# Configure browser/app to use SOCKS5 proxy: localhost:1080
+# All traffic is encrypted through the SSH tunnel
 
-# Configure browser/system to use SOCKS5 proxy at localhost:1080
-# All DNS and traffic goes through the SSH tunnel
+# Background SOCKS proxy
+ssh -fND 1080 user@remote-server
 ```
 
-**Use cases:**
-- Browse the web through a remote server's connection
-- Access resources only available on the remote network
-- Simple VPN alternative
-
-### Tunnel Options
-
-```bash
-# Run tunnel in background without a shell
-ssh -fN -L 8080:localhost:80 user@host
-# -f = background after authentication
-# -N = no remote command (tunnel only)
-
-# Keep tunnel alive
-ssh -o ServerAliveInterval=30 -o ServerAliveCountMax=3 -L 8080:localhost:80 user@host
-
-# Kill background tunnel
-# Find PID: ps aux | grep ssh
-# Or use: ssh -O exit -L 8080:localhost:80 user@host (with multiplexing)
-```
+Use case: Browse the internet through a remote server's connection.
 
 ---
 
@@ -208,108 +207,96 @@ ssh -o ServerAliveInterval=30 -o ServerAliveCountMax=3 -L 8080:localhost:80 user
 
 ```bash
 # Copy file to remote
-scp file.txt user@host:/path/to/destination/
-scp file.txt pi:/home/pi/                      # Using SSH config alias
+scp file.txt user@host:/home/user/
+scp file.txt user@host:~/                    # shorthand for home dir
 
-# Copy from remote
-scp user@host:/path/to/file.txt ./local/
+# Copy file from remote
+scp user@host:/var/log/syslog ./syslog.txt
 
-# Copy directory
-scp -r mydir/ user@host:/path/
+# Copy directory (recursive)
+scp -r mydir/ user@host:~/mydir/
 
-# Specific port
-scp -P 2222 file.txt user@host:/path/
+# Specify port
+scp -P 2222 file.txt user@host:~/
 
-# Preserve timestamps and permissions
-scp -p file.txt user@host:/path/
+# Use SSH config host alias
+scp file.txt pi-field:~/
 ```
 
 ### SFTP (SSH File Transfer Protocol)
 
+Interactive file browser over SSH:
+
 ```bash
 sftp user@host
-
-# SFTP commands:
-sftp> ls                    # List remote files
-sftp> lls                   # List local files
-sftp> cd /remote/path       # Change remote directory
-sftp> lcd /local/path       # Change local directory
-sftp> get file.txt          # Download
-sftp> put file.txt          # Upload
-sftp> get -r directory/     # Download directory
-sftp> put -r directory/     # Upload directory
-sftp> rm file.txt           # Delete remote file
-sftp> exit
+sftp> ls                    # list remote files
+sftp> lls                   # list local files
+sftp> cd /var/log           # change remote dir
+sftp> lcd ~/downloads       # change local dir
+sftp> get syslog            # download file
+sftp> get -r mydir/         # download directory
+sftp> put file.txt          # upload file
+sftp> put -r mydir/         # upload directory
+sftp> mkdir newdir          # create remote dir
+sftp> rm file.txt           # delete remote file
+sftp> bye                   # exit
 ```
 
-### rsync over SSH (Best for Syncing)
+### rsync over SSH (best for syncing)
 
 ```bash
 # Sync local to remote
-rsync -avz /local/path/ user@host:/remote/path/
+rsync -avz --progress ./data/ user@host:~/data/
 
 # Sync remote to local
-rsync -avz user@host:/remote/path/ /local/path/
-
-# With custom SSH port
-rsync -avz -e 'ssh -p 2222' /local/ user@host:/remote/
-
-# Delete files on destination that don't exist on source
-rsync -avz --delete /local/ user@host:/remote/
-
-# Dry run (see what would change)
-rsync -avzn /local/ user@host:/remote/
+rsync -avz user@host:~/data/ ./data/
 
 # Flags:
-# -a = archive (preserves permissions, timestamps, symlinks)
+# -a = archive (recursive, preserves permissions, timestamps, etc.)
 # -v = verbose
 # -z = compress during transfer
-# -P = progress + partial (resume interrupted transfers)
+# --progress = show progress
+# --delete = delete files on destination that don't exist on source
+# -e "ssh -p 2222" = use non-standard SSH port
+
+# Dry run (see what would change)
+rsync -avzn --delete ./data/ user@host:~/data/
 ```
 
 ---
 
 ## SSH Agent
 
-The SSH agent holds your decrypted private keys in memory so you don't re-enter passphrases.
+The SSH agent holds your decrypted private keys in memory, so you don't re-enter passphrases.
 
 ```bash
-# Start agent (usually auto-started)
-eval $(ssh-agent)
+# Start agent
+eval "$(ssh-agent -s)"
 
 # Add key
-ssh-add                              # Add default key
-ssh-add ~/.ssh/id_ed25519            # Add specific key
-ssh-add -l                           # List loaded keys
+ssh-add ~/.ssh/id_ed25519
+ssh-add    # adds default keys
 
-# Auto-add on first use (add to ~/.ssh/config)
-# AddKeysToAgent yes
-```
+# List loaded keys
+ssh-add -l
 
-### Agent Forwarding
+# Remove all keys
+ssh-add -D
 
-Allow the remote server to use your local SSH keys (e.g., to git pull on the server using your GitHub key):
-
-```bash
+# Agent forwarding (use your local keys on remote servers)
 ssh -A user@host
-# Now on 'host', SSH commands use your local agent's keys
+# On the remote host, you can now SSH to other servers using your local keys
+# WARNING: Only use agent forwarding with trusted servers
 ```
-
-**Or in config:**
-```
-Host myserver
-    ForwardAgent yes
-```
-
-**Security warning:** Only enable agent forwarding to servers you trust. A compromised server could use your forwarded agent to authenticate as you.
 
 ---
 
-## Connection Multiplexing
+## Multiplexing (ControlMaster)
 
-Reuse a single SSH connection for multiple sessions — faster subsequent connections.
+Reuse a single SSH connection for multiple sessions. Speeds up subsequent connections dramatically.
 
 Add to `~/.ssh/config`:
+
 ```
 Host *
     ControlMaster auto
@@ -318,13 +305,18 @@ Host *
 ```
 
 ```bash
+# Create the sockets directory
 mkdir -p ~/.ssh/sockets
-```
 
-First connection creates the socket. Subsequent `ssh`, `scp`, `sftp` to the same host reuse it instantly.
+# First connection opens the master
+ssh user@host
 
-```bash
-# Check active connections
+# Subsequent connections reuse it (instant, no re-auth)
+ssh user@host        # new shell
+scp file user@host:  # uses existing connection
+sftp user@host       # uses existing connection
+
+# Check master status
 ssh -O check user@host
 
 # Close master connection
@@ -333,116 +325,207 @@ ssh -O exit user@host
 
 ---
 
-## Security Hardening
+## tmux / screen (Persistent Sessions)
 
-Edit the server's `/etc/ssh/sshd_config`:
+SSH sessions die when the connection drops. Use a terminal multiplexer for persistence.
+
+### tmux (recommended)
 
 ```bash
-# Disable password authentication (key-only)
-PasswordAuthentication no
-ChallengeResponseAuthentication no
+# Install
+sudo apt install tmux
 
-# Disable root login
-PermitRootLogin no
-# Or allow root with key only:
-# PermitRootLogin prohibit-password
+# Start new session
+tmux
+tmux new -s mysession
 
-# Change default port (obscurity, not security, but reduces noise)
-Port 2222
+# Detach (session keeps running)
+Ctrl+b, then d
 
-# Allow specific users only
-AllowUsers pi admin
+# Reattach
+tmux attach -t mysession
+tmux a    # attach to most recent
 
-# Disable empty passwords
-PermitEmptyPasswords no
+# List sessions
+tmux ls
 
-# Limit authentication attempts
-MaxAuthTries 3
-MaxSessions 5
+# Kill session
+tmux kill-session -t mysession
 
-# Idle timeout
-ClientAliveInterval 300
-ClientAliveCountMax 2
-
-# Disable X11 forwarding (if not needed)
-X11Forwarding no
-
-# Disable TCP forwarding (if not needed)
-AllowTcpForwarding no
-
-# Use only protocol 2
-Protocol 2
-
-# Restrict key exchange algorithms (modern only)
-KexAlgorithms curve25519-sha256,curve25519-sha256@libssh.org
-Ciphers chacha20-poly1305@openssh.com,aes256-gcm@openssh.com,aes128-gcm@openssh.com
-MACs hmac-sha2-256-etm@openssh.com,hmac-sha2-512-etm@openssh.com
+# Common keybindings (Ctrl+b, then...):
+# d       detach
+# c       new window
+# n       next window
+# p       previous window
+# 0-9     switch to window N
+# %       split pane vertically
+# "       split pane horizontally
+# arrow   switch between panes
+# x       kill pane
+# [       scroll mode (q to exit, arrows/PgUp/PgDn to scroll)
+# z       zoom/unzoom pane (fullscreen toggle)
 ```
 
-After editing:
+### screen (simpler, widely available)
+
 ```bash
-# Test config syntax
+# Start
+screen
+screen -S mysession
+
+# Detach
+Ctrl+a, then d
+
+# Reattach
+screen -r mysession
+screen -r    # if only one session
+
+# List
+screen -ls
+```
+
+---
+
+## Security Hardening
+
+Edit `/etc/ssh/sshd_config` on the server:
+
+### Disable Password Authentication
+
+```ini
+# /etc/ssh/sshd_config
+PasswordAuthentication no
+ChallengeResponseAuthentication no
+UsePAM no                          # or keep yes for other PAM features
+```
+
+### Change Default Port
+
+```ini
+Port 2222   # any non-standard port, reduces automated attacks
+```
+
+### Restrict Users
+
+```ini
+AllowUsers pi admin               # only these users can SSH
+# or
+AllowGroups sshusers              # only this group
+```
+
+### Other Hardening
+
+```ini
+PermitRootLogin no                # never allow root SSH
+MaxAuthTries 3                    # lock out after 3 failed attempts
+LoginGraceTime 30                 # 30 seconds to authenticate
+X11Forwarding no                  # disable unless needed
+PermitEmptyPasswords no
+ClientAliveInterval 300           # disconnect idle clients after 5 min
+ClientAliveCountMax 2
+```
+
+After changes:
+```bash
+# Test config before restarting (important!)
 sudo sshd -t
 
 # Restart SSH
 sudo systemctl restart sshd
+
+# IMPORTANT: Keep an existing SSH session open while testing!
+# If the config is wrong, you could lock yourself out.
 ```
 
-### Additional Hardening
+### fail2ban (Block Brute Force Attacks)
 
 ```bash
-# Install fail2ban to block brute-force attempts
 sudo apt install fail2ban
-sudo systemctl enable fail2ban
 
-# Default config bans IPs after 5 failed attempts for 10 minutes
-# Customize: /etc/fail2ban/jail.local
+# Create local config
+sudo cp /etc/fail2ban/jail.conf /etc/fail2ban/jail.local
+sudo nano /etc/fail2ban/jail.local
 ```
 
-### SSH Key Rotation
+Key settings in `/etc/fail2ban/jail.local`:
+
+```ini
+[sshd]
+enabled = true
+port = 2222          # match your SSH port
+filter = sshd
+logpath = /var/log/auth.log
+maxretry = 3         # ban after 3 failures
+bantime = 3600       # ban for 1 hour (seconds)
+findtime = 600       # within 10 minutes
+```
 
 ```bash
-# Generate new key
-ssh-keygen -t ed25519 -f ~/.ssh/id_ed25519_new
+sudo systemctl enable fail2ban
+sudo systemctl start fail2ban
 
-# Add new key to servers
-ssh-copy-id -i ~/.ssh/id_ed25519_new.pub user@host
+# Check status
+sudo fail2ban-client status sshd
 
-# Test new key
-ssh -i ~/.ssh/id_ed25519_new user@host
-
-# Remove old key from server's ~/.ssh/authorized_keys
-# Then delete old local key
+# Unban an IP
+sudo fail2ban-client set sshd unbanip 192.168.1.100
 ```
 
 ---
 
-## Common Issues
+## Common Patterns
 
-| Problem                           | Solution                                         |
-|-----------------------------------|--------------------------------------------------|
-| "Permission denied (publickey)"   | Check key permissions (600), check authorized_keys|
-| "Host key verification failed"    | `ssh-keygen -R hostname` to remove old key       |
-| Connection timeout                | Check firewall, verify port, try `ssh -v`        |
-| "Too many authentication failures"| Specify key: `ssh -i ~/.ssh/key user@host`       |
-| Broken pipe / disconnects         | Add `ServerAliveInterval 60` to config           |
-| Slow connection setup             | Add `UseDNS no` to server sshd_config            |
-| Can't forward port                | Check `AllowTcpForwarding` on server             |
+### Keep SSH Running After Disconnect
 
----
+```bash
+# Use tmux or screen (see above)
 
-## Quick Reference
+# Or use nohup
+ssh user@host "nohup ./long-script.sh > output.log 2>&1 &"
 
-| Task                              | Command                                         |
-|-----------------------------------|-------------------------------------------------|
-| Connect                           | `ssh user@host`                                 |
-| Generate key                      | `ssh-keygen -t ed25519`                         |
-| Copy key to server                | `ssh-copy-id user@host`                         |
-| Local port forward                | `ssh -L 8080:target:80 user@host`               |
-| Remote port forward               | `ssh -R 8080:localhost:3000 user@host`          |
-| SOCKS proxy                       | `ssh -D 1080 user@host`                         |
-| Copy file to remote               | `scp file.txt user@host:/path/`                 |
-| Copy file from remote             | `scp user@host:/path/file.txt ./`               |
-| Sync directories                  | `rsync -avz local/ user@host:/remote/`          |
-| Background tunnel                 | `ssh -fN -L 8080:localhost:80 user@host`        |
-| Run remote command                | `ssh user@host 'ls -la /tmp'`                   |
+# Or use systemd on the remote
+ssh user@host "sudo systemctl start my-service"
+```
+
+### SSH Through a Firewall
+
+```bash
+# If port 22 is blocked, try port 443 (usually open)
+# On server, add to /etc/ssh/sshd_config:
+# Port 22
+# Port 443
+
+# Connect on port 443
+ssh -p 443 user@host
+```
+
+### Copy SSH Key to Multiple Hosts
+
+```bash
+for host in pi1 pi2 pi3 sensor1 sensor2; do
+    ssh-copy-id -i ~/.ssh/id_ed25519.pub "pi@${host}.local"
+done
+```
+
+### Quick Reverse Tunnel (Access Home Pi from Anywhere)
+
+On the Pi (at home, behind NAT):
+```bash
+# Create persistent reverse tunnel to a VPS
+ssh -fNR 2222:localhost:22 user@my-vps.com
+# This maps VPS:2222 -> Pi:22
+```
+
+From anywhere:
+```bash
+# Connect to the Pi through the VPS
+ssh -p 2222 pi@my-vps.com
+```
+
+Use autossh for automatic reconnection:
+```bash
+sudo apt install autossh
+autossh -M 0 -fNR 2222:localhost:22 user@my-vps.com \
+    -o "ServerAliveInterval 30" \
+    -o "ServerAliveCountMax 3"
+```

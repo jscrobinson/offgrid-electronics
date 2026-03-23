@@ -1,161 +1,328 @@
 # Field Solar Setup Guide
 
-> Portable solar power for electronics in the field.
+Portable solar power for electronics, communications, and off-grid computing.
 
-## Overview
+---
 
-A field solar setup keeps your devices charged and running when there's no grid power. This guide covers portable setups for charging radios, phones, laptops, Raspberry Pi, and other electronics.
+## System Components
 
-## Components
-
-### Solar Panels
-
-| Type | Size | Output | Use Case |
-|---|---|---|---|
-| Small rigid | 6V 1-3W | 200-500mA | ESP32/Arduino trickle charge |
-| Folding panel | 21-28V, 20-60W | 1-3A | Phone, radio, battery bank |
-| Folding panel | 21-28V, 100W | 4-5A | Laptop, Pi, multiple devices |
-| Rigid panel | 18V, 100-200W | 5-10A | Base camp, continuous power |
-
-**Folding panels** (Rockpals, Jackery, BigBlue, Renogy) are the best choice for portable use — compact when folded, fast to deploy.
-
-### Charge Controllers
-
-For battery charging (not USB direct):
-
-- **PWM**: Simple, cheap. Panel voltage must roughly match battery voltage. ~75% efficient.
-- **MPPT**: Converts excess panel voltage to current. ~95% efficient. 20-30% more energy captured. Worth it for panels >50W.
-
-Budget picks:
-- Small: CN3791 module ($2, single cell solar charging IC)
-- Medium: Victron SmartSolar 75/15 (15A MPPT, Bluetooth monitoring)
-- Large: EPever Tracer 2210AN (20A MPPT, good value)
-
-### Batteries
-
-| Type | Pros | Cons | Best For |
-|---|---|---|---|
-| LiFePO4 12V | 2000+ cycles, safe, stable voltage | Heavier, more expensive | Semi-permanent field setups |
-| Li-ion power bank | Convenient, USB output, portable | Limited cycles (500), lower capacity | Day trips, phone/radio charging |
-| 18650 packs | Flexible, rebuildable, cheap per Wh | Requires BMS, assembly | DIY custom packs |
-| Lead-acid 12V | Cheap, available everywhere | Very heavy, 50% max DoD | Vehicle/base camp only |
-
-## Example Setups
-
-### Minimal: Phone + Radio Charging
-
-- **Panel**: 21W folding panel with USB output ($25-40)
-- **Battery**: 10,000-20,000 mAh power bank
-- **Charges**: Phone (1-2x/day), Baofeng battery (2-3x/day)
-- **Weight**: ~500g total
-- **Cost**: ~$50-70
-
-### Medium: Laptop + Pi + Radios
-
-- **Panel**: 60-100W folding panel ($80-150)
-- **Charge controller**: 10A MPPT or PWM
-- **Battery**: 12V 20Ah LiFePO4 ($80-120) = 256Wh
-- **Inverter**: 150W pure sine wave (for laptop) or use 12V-to-USB-C PD adapter
-- **Charges**: Laptop (1x), Pi (continuous 8+ hours), phones, radios
-- **Weight**: ~5kg
-- **Cost**: ~$250-400
-
-### Full: Base Camp Continuous Power
-
-- **Panel**: 200W rigid or 2x100W folding ($150-300)
-- **Charge controller**: 20A MPPT
-- **Battery**: 12V 100Ah LiFePO4 ($250-400) = 1280Wh
-- **Inverter**: 300-500W pure sine wave
-- **Powers**: Multiple laptops, Pi cluster, radios, LED lighting, fans
-- **Weight**: ~20kg (battery alone is ~13kg)
-- **Cost**: ~$600-1000
-
-## Wiring
-
-### Basic Wiring Diagram
+A field solar setup has four main components:
 
 ```
-Solar Panel ──→ Charge Controller ──→ Battery
-                       │
-                       ├──→ 12V loads (direct)
-                       │
-                       └──→ Inverter ──→ AC loads
-                                │
-                               Fuse between each component
+Solar Panel → Charge Controller → Battery → Load
 ```
 
-### Wire Gauge
+1. **Solar panel** — Converts sunlight to DC electricity
+2. **Charge controller** — Regulates charging, prevents overcharge/discharge
+3. **Battery** — Stores energy for use when sun isn't available
+4. **Load** — Your devices (radio, Pi, sensors, lights)
 
-| Current | Min Gauge (short run <3m) | Min Gauge (long run >3m) |
-|---|---|---|
-| <5A | 18 AWG | 16 AWG |
-| 5-10A | 16 AWG | 14 AWG |
-| 10-20A | 14 AWG | 12 AWG |
-| 20-30A | 12 AWG | 10 AWG |
+---
 
-### Connectors
+## Solar Panels
 
-- **Anderson Powerpole**: Standard for 12V DC, genderless, color-coded, rated 15-45A. Highly recommended for field use.
-- **MC4**: Standard for solar panels. Weatherproof, locking.
-- **XT60**: Common for LiPo/Li-ion packs. Rated 60A continuous.
-- **Barrel jack**: Fine for low current (<3A). Common on small devices.
+### Types for Field Use
+
+| Type            | Efficiency | Weight      | Durability | Best For           |
+|-----------------|------------|-------------|------------|--------------------|
+| Monocrystalline | 20-24%     | Moderate    | Good       | Fixed/semi-portable|
+| Folding (mono)  | 20-22%     | Light       | Good       | Backpack/field     |
+| Flexible (thin) | 15-18%     | Very light  | Fair       | Mounting on packs  |
+| Amorphous       | 8-12%      | Light       | Good       | Low light, cloudy  |
+
+### Recommended Panel Sizes
+
+| Panel Wattage | Typical Use                          | Weight   | Folded Size      |
+|---------------|--------------------------------------|----------|------------------|
+| 10W           | Phone charging, single sensor node   | ~0.5 kg  | Book-sized       |
+| 21-28W        | Phone + small electronics            | ~0.7 kg  | Tablet-sized     |
+| 50W           | Raspberry Pi + radio + phone         | ~2 kg    | Briefcase        |
+| 100W          | Full field station                   | ~4 kg    | Large briefcase  |
+| 200W          | Multiple devices, laptop charging    | ~7 kg    | Suitcase         |
+
+### Panel Specifications
+
+Key specs to understand:
+- **Vmp** — Voltage at maximum power (operating voltage)
+- **Imp** — Current at maximum power
+- **Voc** — Open circuit voltage (no load, higher than Vmp)
+- **Isc** — Short circuit current (maximum possible current)
+
+**Important:** Panel output varies with sunlight intensity. Rated specs are at **STC** (Standard Test Conditions: 1000W/m2, 25C). Real-world output is typically 60-80% of rated.
+
+### Panel Positioning
+
+- Face the sun directly (perpendicular to rays) for maximum output
+- In Northern Hemisphere: face south, tilt angle roughly equal to latitude
+- Adjust every 2-3 hours if possible
+- Shade on even one cell can reduce entire panel output drastically (bypass diodes help but don't eliminate the problem)
+
+---
+
+## Charge Controllers
+
+### PWM (Pulse Width Modulation)
+
+- Simpler, cheaper
+- Panel voltage must roughly match battery voltage
+- Less efficient — wastes excess panel voltage as heat
+- Fine for small systems (under 50W)
+
+### MPPT (Maximum Power Point Tracking)
+
+- More expensive but 15-30% more efficient
+- Converts excess voltage to current (like a DC-DC converter)
+- Can use higher voltage panels with lower voltage batteries
+- Worth it for systems over 50W
+
+### Common Controllers
+
+| Controller          | Type | Max Panel | Battery     | Price  |
+|---------------------|------|-----------|-------------|--------|
+| Generic 10A PWM     | PWM  | ~120W@12V | 12V/24V     | ~$8    |
+| EPever Tracer 1210AN| MPPT | 130W@12V  | 12V/24V     | ~$50   |
+| Victron SmartSolar  | MPPT | 100-450W  | 12V/24V/48V | ~$100+ |
+| Genasun GV-5        | MPPT | 65W       | LiFePO4     | ~$80   |
+
+### Controller Sizing
+
+Controller current rating must exceed the panel's maximum current:
+
+```
+Panel Wattage / Battery Voltage = Minimum Controller Amps
+
+Example: 100W panel, 12V battery
+100W / 12V = 8.33A → Use at least a 10A controller
+```
+
+For MPPT, also check the maximum input voltage (Voc of panel must be below controller's max input).
+
+---
+
+## Batteries
+
+### LiFePO4 (Lithium Iron Phosphate) — Recommended
+
+**Why LiFePO4 for field use:**
+- 2000-5000+ cycle life (vs 300-500 for lead-acid)
+- Lightweight (1/3 the weight of lead-acid for same capacity)
+- Flat discharge curve — steady voltage throughout discharge
+- Safe chemistry — no thermal runaway, no toxic gases
+- 80-100% usable capacity (vs 50% for lead-acid)
+- Tolerates partial charge/discharge well
+
+| Capacity | Voltage | Usable Energy | Weight  | Use Case                    |
+|----------|---------|---------------|---------|------------------------------|
+| 6Ah      | 12.8V   | 76.8 Wh       | ~0.8 kg | Single device, overnight     |
+| 12Ah     | 12.8V   | 153.6 Wh      | ~1.5 kg | Pi + radio, 1-2 days         |
+| 20Ah     | 12.8V   | 256 Wh        | ~2.5 kg | Full station, 2-3 days       |
+| 50Ah     | 12.8V   | 640 Wh        | ~6 kg   | Extended deployment          |
+| 100Ah    | 12.8V   | 1280 Wh       | ~12 kg  | Base camp                    |
+
+### LiFePO4 Voltage Chart
+
+| State of Charge | Cell Voltage | 4S (12V) Pack |
+|-----------------|-------------|---------------|
+| 100%            | 3.65V       | 14.6V         |
+| 90%             | 3.35V       | 13.4V         |
+| 80%             | 3.32V       | 13.3V         |
+| 50%             | 3.30V       | 13.2V         |
+| 20%             | 3.27V       | 13.1V         |
+| 10%             | 3.20V       | 12.8V         |
+| 0% (cutoff)     | 2.50V       | 10.0V         |
+
+**Charge voltage:** 14.4-14.6V (3.6-3.65V per cell)
+**Discharge cutoff:** 10.0V (2.5V per cell)
+
+### Lead-Acid (Budget Alternative)
+
+- Cheaper upfront
+- Heavier (3x weight of LiFePO4)
+- Only use 50% of capacity (deep discharge damages them)
+- Shorter lifespan
+- AGM (Absorbed Glass Mat) is best for portable use — no liquid acid
+
+### Power Banks and USB Batteries
+
+For very small setups:
+- USB power banks (10,000-30,000 mAh at 3.7V)
+- Charge via solar panel's USB output
+- Good for phones, ESP32, small Pi projects
+- Limited output current — may not support Pi 4 reliably
+
+---
+
+## Connectors and Wiring
+
+### Anderson Powerpole Connectors
+
+The standard for 12V DC field power distribution:
+
+- Color-coded: Red (positive), Black (negative)
+- Genderless — any connector mates with any other
+- Rated 15A, 30A, or 45A depending on contact size
+- Crimp connections (use proper ratcheting crimper)
+- Standard in ham radio, ARES/RACES emergency communications
+
+**Wiring convention (ARES standard):**
+- Red housing on top (tongue up), black on bottom
+- Pin on red (positive), socket on black (negative)
+
+### Wire Gauges
+
+| Wire Gauge (AWG) | Max Current (chassis) | Typical Use                  |
+|-------------------|-----------------------|------------------------------|
+| 18                | 16A                   | Small loads, sensors          |
+| 16                | 22A                   | LED strips, fans              |
+| 14                | 32A                   | Medium loads                  |
+| 12                | 41A                   | Main power runs               |
+| 10                | 55A                   | High current, battery cables  |
+
+**Voltage drop matters on long runs.** Use a wire gauge calculator for runs over 3 meters.
 
 ### Fuses
 
-**Always fuse between battery and load.** A short circuit on an unfused lithium battery can cause fire.
+**Always fuse the positive wire** close to the battery:
 
-| Circuit | Fuse Rating |
-|---|---|
-| Battery → charge controller | 1.5x panel short circuit current |
-| Battery → inverter | 1.25x inverter max current |
-| Battery → 12V loads | 1.25x expected max load |
+| Fuse Type        | Use Case                          |
+|------------------|-----------------------------------|
+| ATC blade fuse   | Automotive-style, easy to replace |
+| Inline fuse      | Simple in-line protection         |
+| Polyfuse (PTC)   | Self-resetting, for electronics   |
+| Circuit breaker  | Reusable, for main battery line   |
 
-Use automotive blade fuses (cheap, available everywhere) with inline fuse holders.
+**Fuse sizing:** 125% of maximum expected current.
+
+---
 
 ## Daily Power Estimation
 
-1. List all devices and their power consumption
-2. Estimate hours of use per day
-3. Sum up Wh/day
-
-| Device | Power (W) | Hours/day | Wh/day |
-|---|---|---|---|
-| Raspberry Pi 4 | 5 | 8 | 40 |
-| T-Beam (Meshtastic) | 0.5 | 24 | 12 |
-| Laptop charging | 45 | 2 | 90 |
-| Phone charging | 10 | 2 | 20 |
-| LED light | 5 | 4 | 20 |
-| **Total** | | | **182 Wh/day** |
-
-### Sizing the Battery
-
-- Battery should store 2-3 days of power (for cloudy days)
-- For LiFePO4: usable capacity = 90% of rated
-- 182 Wh/day × 2 days / 0.9 = **405 Wh minimum** → 12V 34Ah LiFePO4
-
-### Sizing the Panel
-
-- Average sun hours varies by location (3-6 hours of "peak sun")
-- Account for losses (~20%: angle, clouds, controller efficiency)
-- 182 Wh/day / 4 hours / 0.8 = **57W minimum** → use a 100W panel for margin
-
-## Tips
-
-- **Angle the panel** toward the sun. Even rough alignment improves output 20-30%.
-- **Avoid partial shading**. One shaded cell can cut output by 50%+ (unless bypass diodes are present).
-- **Monitor voltage**. A simple voltmeter on the battery tells you state of charge.
-- **LiFePO4 voltage vs SOC**: 13.4V=100%, 13.2V=80%, 13.0V=50%, 12.8V=20%, 12.0V=0% (empty)
-- **Bring a USB power meter** ($5-10) to verify charging current and diagnose issues.
-- **Store panels flat** to avoid cracking cells. Don't fold them wet.
-
-## Small-Scale: ESP32 Solar Sensor Node
-
-For a solar-powered ESP32 that runs indefinitely:
+### Step 1: Calculate Daily Consumption
 
 ```
-6V 1W solar panel → TP4056 module → 18650 cell → ESP32 (via 3.3V regulator or direct)
+Device Power (W) x Hours/day = Watt-hours/day (Wh)
+
+Example field station:
+  Raspberry Pi 4:     5W  x 24h =  120 Wh
+  LoRa radio:         0.1W x 24h =  2.4 Wh
+  LED light:          3W  x 4h  =   12 Wh
+  Phone charging:     10W x 2h  =   20 Wh
+                                   --------
+  Total:                           154.4 Wh/day
 ```
 
-- Add a Schottky diode between panel and TP4056 to prevent reverse current at night
-- ESP32 deep sleep: ~10μA → a single 18650 lasts months even without sun
-- With 1W panel + deep sleep + 5-minute wake cycle: runs indefinitely in most climates
+### Step 2: Size the Battery
+
+Account for days without sun (autonomy) and depth of discharge:
+
+```
+Battery capacity = (Daily Wh x Days of autonomy) / (Battery voltage x DoD)
+
+For LiFePO4 (90% DoD), 2 days autonomy:
+= (154.4 x 2) / (12.8 x 0.9)
+= 308.8 / 11.52
+= 26.8 Ah → Use a 30Ah battery
+```
+
+### Step 3: Size the Solar Panel
+
+Account for sun hours and system losses (~20%):
+
+```
+Panel watts = Daily Wh / (Sun hours x 0.8)
+
+For 4 peak sun hours:
+= 154.4 / (4 x 0.8)
+= 48.25W → Use a 50-60W panel
+
+For 6 peak sun hours (summer, clear):
+= 154.4 / (6 x 0.8)
+= 32.2W → Use a 40-50W panel
+```
+
+**Peak sun hours** vary by location and season. Conservative estimate: 3-4 hours for temperate regions, 5-6 for sunny/desert regions.
+
+---
+
+## Example Setups
+
+### Minimal: Phone + Meshtastic Node
+
+```
+Components:
+- 21W folding solar panel (~$30)
+- USB power bank 20,000mAh (~$20)
+- Meshtastic node (T-Beam) — powered from power bank USB
+
+Daily usage: ~15 Wh
+Panel produces: ~60 Wh on a sunny day
+Runtime without sun: ~3-4 days
+Total weight: ~0.8 kg
+Total cost: ~$80
+```
+
+### Medium: Raspberry Pi Field Server
+
+```
+Components:
+- 50W folding solar panel (~$60)
+- 20Ah LiFePO4 12V battery (~$80)
+- 10A PWM charge controller (~$10)
+- 12V to 5V 3A USB-C buck converter (~$5)
+- Anderson Powerpole connectors (~$15)
+- 10A inline fuse (~$3)
+
+Devices:
+- Raspberry Pi 4 (5W continuous)
+- Meshtastic node (0.1W)
+- USB SSD (2W when active)
+
+Daily usage: ~160 Wh
+Battery capacity: 256 Wh (usable)
+Runtime without sun: ~1.5 days
+Panel produces: ~140 Wh on a sunny day
+Total weight: ~5 kg
+Total cost: ~$250
+```
+
+### Full: Off-Grid Communications Station
+
+```
+Components:
+- 100W rigid or folding solar panel (~$100)
+- 50Ah LiFePO4 12V battery (~$200)
+- 20A MPPT charge controller (~$60)
+- 12V distribution box with fuses
+- Multiple DC-DC converters (12V→5V, 12V→3.3V)
+- Anderson Powerpole distribution strip
+
+Devices:
+- Raspberry Pi 4 as server
+- Meshtastic gateway node
+- WiFi access point
+- LED lighting
+- Phone/laptop charging
+- Environmental sensors
+
+Daily usage: ~300 Wh
+Battery capacity: 640 Wh (usable)
+Runtime without sun: ~2 days
+Panel produces: ~280 Wh on a sunny day
+Total weight: ~18 kg
+Total cost: ~$500
+```
+
+---
+
+## Tips and Gotchas
+
+1. **Always connect battery to controller first**, then panel. Disconnect in reverse order (panel first, then battery)
+2. **Never connect panel directly to battery** without a charge controller
+3. **Don't mix battery types** or batteries of different ages/capacities in parallel
+4. **LiFePO4 needs LiFePO4-specific charge profile** — set your controller correctly (14.4V charge, not 14.7V for lead-acid)
+5. **Shade kills solar output** — even partial shade on one cell affects the whole panel
+6. **Temperature affects batteries** — LiFePO4 won't charge below 0C (most BMS will prevent it). Keep batteries insulated in cold weather
+7. **Fuse everything** — especially the battery positive terminal
+8. **Use silicone wire** for field use — more flexible, heat resistant, doesn't crack in cold
+9. **Carry a multimeter** — essential for debugging power issues
+10. **Label everything** — voltage, polarity, fuse rating, wire gauge
