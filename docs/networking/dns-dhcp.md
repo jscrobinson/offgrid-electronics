@@ -1,60 +1,74 @@
 # DNS & DHCP
 
-> How name resolution and automatic IP assignment work on local networks.
+How DNS works, DHCP basics, dnsmasq, Pi-hole, static leases, and mDNS/Avahi.
 
-## DNS Basics
+---
 
-DNS (Domain Name System) translates human-readable domain names to IP addresses.
+## How DNS Works
 
-### How a DNS Query Works
+DNS (Domain Name System) translates human-readable names (example.com) to IP addresses (93.184.216.34).
 
-1. **Browser cache** → already resolved recently?
-2. **OS resolver** (`/etc/resolv.conf` or systemd-resolved) → cached locally?
-3. **Recursive resolver** (ISP or 1.1.1.1/8.8.8.8) → asks on your behalf
-4. **Root servers** → "ask the .com TLD server"
-5. **TLD server** → "ask example.com's authoritative server"
-6. **Authoritative server** → "example.com is 93.184.216.34"
-7. Answer cached at each level (TTL determines how long)
+### Resolution Process
 
-### Common Record Types
+1. **Browser/app** asks the OS resolver for "example.com"
+2. **OS resolver** checks `/etc/hosts`, then its local cache
+3. If not cached, queries the configured **recursive resolver** (e.g., 8.8.8.8 or your router)
+4. Recursive resolver queries the **root servers** (.) — "Who handles .com?"
+5. Root server responds with **.com TLD servers**
+6. Recursive resolver queries .com TLD — "Who handles example.com?"
+7. TLD responds with **authoritative nameserver** for example.com
+8. Recursive resolver queries authoritative NS — "What's the IP for example.com?"
+9. Authoritative NS responds with the IP address
+10. Result is cached at each level (TTL determines cache duration)
 
-| Type | Purpose | Example |
-|---|---|---|
-| A | IPv4 address | `example.com → 93.184.216.34` |
-| AAAA | IPv6 address | `example.com → 2606:2800:220:1:...` |
-| CNAME | Alias to another name | `www.example.com → example.com` |
-| MX | Mail server | `example.com → mail.example.com (priority 10)` |
-| TXT | Text data (SPF, DKIM, etc.) | `v=spf1 include:_spf.google.com ~all` |
-| NS | Nameserver for zone | `example.com → ns1.example.com` |
-| PTR | Reverse lookup (IP→name) | `34.216.184.93 → example.com` |
-| SRV | Service location | `_sip._tcp.example.com → sip.example.com:5060` |
-
-### DNS Configuration on Linux
-
-```bash
-# Check current DNS
-cat /etc/resolv.conf
-
-# Or with systemd-resolved
-resolvectl status
-
-# Test DNS resolution
-dig example.com
-nslookup example.com
-host example.com
-
-# Query specific DNS server
-dig @8.8.8.8 example.com
+```
+Browser → OS Resolver → Recursive Resolver → Root NS
+                                            → TLD NS (.com)
+                                            → Authoritative NS (example.com)
+                                            ← IP: 93.184.216.34
 ```
 
-### Common Public DNS Servers
+### DNS Record Types
 
-| Provider | Primary | Secondary |
-|---|---|---|
-| Cloudflare | 1.1.1.1 | 1.0.0.1 |
-| Google | 8.8.8.8 | 8.8.4.4 |
-| Quad9 | 9.9.9.9 | 149.112.112.112 |
-| OpenDNS | 208.67.222.222 | 208.67.220.220 |
+| Type  | Purpose                          | Example                              |
+|-------|----------------------------------|--------------------------------------|
+| A     | IPv4 address                     | example.com → 93.184.216.34          |
+| AAAA  | IPv6 address                     | example.com → 2606:2800:...          |
+| CNAME | Alias to another name            | www.example.com → example.com        |
+| MX    | Mail server                      | example.com → mail.example.com       |
+| TXT   | Text data (SPF, DKIM, etc.)      | "v=spf1 include:..."                |
+| NS    | Nameserver                       | example.com → ns1.example.com        |
+| PTR   | Reverse DNS (IP to name)         | 34.216.184.93 → example.com          |
+| SRV   | Service location                 | _sip._tcp.example.com → ...          |
+| SOA   | Start of Authority               | Zone metadata                         |
+
+### DNS Tools
+
+```bash
+# Query DNS
+dig example.com
+dig example.com A              # Specific record type
+dig @8.8.8.8 example.com      # Query specific server
+dig +short example.com         # Just the answer
+dig +trace example.com         # Show full resolution chain
+
+# Simple lookup
+nslookup example.com
+nslookup example.com 8.8.8.8  # Specific server
+host example.com
+
+# Reverse DNS
+dig -x 93.184.216.34
+
+# Check DNS response time
+dig example.com | grep "Query time"
+
+# View system DNS config
+cat /etc/resolv.conf
+resolvectl status              # systemd-resolved
+```
+
+---
 
 ## DHCP Basics
 
@@ -62,23 +76,31 @@ DHCP (Dynamic Host Configuration Protocol) automatically assigns IP addresses to
 
 ### DHCP Process (DORA)
 
-1. **Discover**: Client broadcasts "I need an IP" (UDP 67/68)
-2. **Offer**: Server offers an IP from its pool
-3. **Request**: Client accepts the offer
-4. **Acknowledge**: Server confirms the lease
+1. **Discover:** Client broadcasts "I need an IP address"
+2. **Offer:** DHCP server responds with an available IP
+3. **Request:** Client says "I'll take that one"
+4. **Acknowledge:** Server confirms the lease
 
-### Lease Duration
+### What DHCP Provides
 
-- Devices get an IP for a set time (lease)
-- At 50% of lease time, client tries to renew
-- At 87.5%, client broadcasts for any DHCP server
-- When lease expires, client must start over
+- IP address
+- Subnet mask
+- Default gateway
+- DNS server(s)
+- Lease duration
+- Optional: NTP server, domain name, MTU, routes
 
-## dnsmasq — Lightweight DNS + DHCP
+### DHCP Lease
 
-dnsmasq is perfect for small networks (Pi, IoT gateway, WiFi AP).
+Each IP assignment has a **lease time**. When the lease expires, the client must renew. Clients typically try to renew at 50% of lease time.
 
-### Install
+---
+
+## dnsmasq
+
+dnsmasq is a lightweight DNS forwarder and DHCP server — perfect for small networks, Raspberry Pi, embedded systems.
+
+### Installation
 
 ```bash
 sudo apt install dnsmasq
@@ -86,169 +108,385 @@ sudo apt install dnsmasq
 
 ### Configuration
 
-`/etc/dnsmasq.conf`:
+Edit `/etc/dnsmasq.conf` (or create a file in `/etc/dnsmasq.d/`):
+
 ```ini
-# Interface to listen on
-interface=eth0
+# ============ GENERAL ============
 
-# DHCP range: IP pool, subnet mask, lease time
-dhcp-range=192.168.1.100,192.168.1.200,255.255.255.0,24h
-
-# Default gateway
-dhcp-option=3,192.168.1.1
-
-# DNS server to advertise to clients
-dhcp-option=6,192.168.1.1
-
-# Static lease by MAC address
-dhcp-host=aa:bb:cc:dd:ee:ff,192.168.1.50,raspberrypi
-
-# Domain name
-domain=local
-
-# Enable DNS caching (default 150 entries)
-cache-size=1000
+# Don't read /etc/resolv.conf for upstream DNS
+no-resolv
 
 # Upstream DNS servers
 server=1.1.1.1
 server=8.8.8.8
 
+# Only listen on specific interfaces
+interface=eth0
+bind-interfaces
+
+# Don't forward short names (without dots)
+domain-needed
+bogus-priv
+
+# ============ DNS ============
+
+# Local domain
+domain=home.local
+local=/home.local/
+
+# Custom DNS records
+address=/myserver.home.local/192.168.1.10
+address=/printer.home.local/192.168.1.20
+
+# Block a domain (return NXDOMAIN)
+address=/ads.example.com/
+
+# Cache size
+cache-size=1000
+
+# Log DNS queries (debug)
+#log-queries
+
+# ============ DHCP ============
+
+# DHCP range and lease time
+dhcp-range=192.168.1.100,192.168.1.200,255.255.255.0,24h
+
+# Default gateway
+dhcp-option=3,192.168.1.1
+
+# DNS server
+dhcp-option=6,192.168.1.1
+
+# NTP server
+dhcp-option=42,192.168.1.1
+
+# Domain name
+dhcp-option=15,home.local
+
+# Static DHCP leases (MAC → IP → hostname)
+dhcp-host=aa:bb:cc:dd:ee:01,server,192.168.1.10
+dhcp-host=aa:bb:cc:dd:ee:02,printer,192.168.1.20
+dhcp-host=aa:bb:cc:dd:ee:03,esp32-sensor,192.168.1.30
+
+# DHCP lease file
+dhcp-leasefile=/var/lib/misc/dnsmasq.leases
+
+# Always send these options, even if not requested
+dhcp-authoritative
+
 # Log DHCP transactions
 log-dhcp
-
-# Don't read /etc/resolv.conf (use servers above)
-no-resolv
 ```
 
-### Managing dnsmasq
+### Common DHCP Options
+
+| Option | Number | Purpose                    | Example                      |
+|--------|--------|----------------------------|------------------------------|
+| Router | 3      | Default gateway            | `dhcp-option=3,192.168.1.1`  |
+| DNS    | 6      | DNS server                 | `dhcp-option=6,192.168.1.1`  |
+| Domain | 15     | Domain name                | `dhcp-option=15,home.local`  |
+| NTP    | 42     | NTP server                 | `dhcp-option=42,pool.ntp.org`|
+| MTU    | 26     | Interface MTU              | `dhcp-option=26,1500`        |
+
+### Management
 
 ```bash
-# Start/restart
+# Test config
+dnsmasq --test
+
+# Restart
 sudo systemctl restart dnsmasq
 
-# Check status
-sudo systemctl status dnsmasq
-
-# View leases
+# View current leases
 cat /var/lib/misc/dnsmasq.leases
 
-# Test DNS
-dig @localhost example.com
+# View logs
+journalctl -u dnsmasq -f
+
+# Clear DNS cache (restart dnsmasq)
+sudo systemctl restart dnsmasq
 ```
 
-## Pi-hole — Ad-Blocking DNS
+---
 
-Pi-hole acts as a DNS sinkhole, blocking ads and trackers network-wide.
+## Pi-hole
 
-### Install
+Pi-hole is a network-wide ad blocker that acts as a DNS sinkhole. Built on dnsmasq/FTL.
+
+### Installation
 
 ```bash
 curl -sSL https://install.pi-hole.net | bash
+# Follow the interactive installer
+# Choose interface, upstream DNS, blocklists, etc.
 ```
 
-### Key Features
-
-- Blocks ads/trackers for all devices on the network
-- Web dashboard for monitoring and management
-- Built on dnsmasq (or optionally FTL/unbound)
-- DHCP server built-in (can replace your router's DHCP)
-- Customizable blocklists and whitelists
-
-### Configuration
-
-1. Point your router's DNS to the Pi-hole's IP
-2. Or set individual devices to use Pi-hole as DNS
-3. Access dashboard at `http://pi.hole/admin` or `http://<PI_IP>/admin`
+### Post-Install
 
 ```bash
-# Change password
+# Set/change admin password
 pihole -a -p
+
+# Access web interface
+# http://pi.hole/admin  (if DNS is pointed to Pi-hole)
+# http://192.168.1.x/admin
+```
+
+### Configure Devices to Use Pi-hole
+
+**Option 1: Per-device** — Set DNS to Pi-hole IP in each device's network settings.
+
+**Option 2: Router-wide** — Set Pi-hole as the DNS server in your router's DHCP settings. All devices on the network automatically use it.
+
+**Option 3: Pi-hole as DHCP server** — Disable DHCP on your router, enable it in Pi-hole (Settings → DHCP).
+
+### Pi-hole Commands
+
+```bash
+# Status
+pihole status
 
 # Update blocklists
 pihole -g
 
 # Enable/disable blocking
+pihole disable          # Disable indefinitely
+pihole disable 5m       # Disable for 5 minutes
 pihole enable
-pihole disable 5m  # Disable for 5 minutes
 
-# Check status
-pihole status
+# Query log
+pihole -t               # Tail the log
+
+# Whitelist/blacklist
+pihole -w example.com   # Whitelist
+pihole -b ads.bad.com   # Blacklist
+
+# Update Pi-hole
+pihole -up
+
+# Flush logs
+pihole flush
 ```
 
-## Static DHCP Leases / Reservations
+### Custom DNS Records in Pi-hole
 
-Assign the same IP to a device every time based on its MAC address.
+Add to `/etc/pihole/custom.list`:
+```
+192.168.1.10 server.local
+192.168.1.20 printer.local
+192.168.1.50 pi.local
+```
+
+Or use the web interface: Local DNS → DNS Records.
+
+### CNAME Records
+
+Add to `/etc/dnsmasq.d/05-custom-cname.conf`:
+```
+cname=nas.local,server.local
+```
+
+---
+
+## Static DHCP Leases
+
+Assign a fixed IP to a device based on its MAC address.
 
 ### In dnsmasq
 
 ```ini
-# MAC, IP, hostname
-dhcp-host=aa:bb:cc:dd:ee:ff,192.168.1.50,mydevice
-dhcp-host=11:22:33:44:55:66,192.168.1.51,sensor-node
+# In /etc/dnsmasq.conf or /etc/dnsmasq.d/static-leases.conf
+dhcp-host=aa:bb:cc:dd:ee:01,hostname,192.168.1.10
+dhcp-host=aa:bb:cc:dd:ee:02,192.168.1.20
 ```
 
-### Find a Device's MAC Address
+### In Pi-hole
+
+Web interface → Settings → DHCP → Static DHCP leases (bottom of page).
+
+### Find MAC Address
 
 ```bash
 # On the device itself
 ip link show
-ifconfig
+# or
+cat /sys/class/net/eth0/address
 
-# From the network (ARP table)
+# From another machine on the same network
+# After pinging the target:
 arp -a
+# or
 ip neigh show
-
-# Scan network
-nmap -sn 192.168.1.0/24
 ```
 
-## mDNS / Avahi (.local Hostname Resolution)
+---
 
-mDNS (Multicast DNS) lets devices find each other by name on a local network without a DNS server.
+## mDNS / Avahi (Zero-Configuration Networking)
+
+mDNS (Multicast DNS) allows devices to find each other on a local network using `.local` names without a DNS server.
 
 ### How It Works
 
-- Devices announce `hostname.local` via multicast (224.0.0.251, port 5353)
-- Any device can resolve `raspberrypi.local` without configuring DNS
-- Protocol: RFC 6762, implemented by Avahi (Linux) and Bonjour (Apple/Windows)
+- Devices announce their hostname on the `.local` domain
+- Uses multicast address 224.0.0.251:5353 (UDP)
+- Each device responds to queries for its own name
+- No central server needed
 
-### Setup on Linux
+### Avahi (Linux mDNS Implementation)
 
 ```bash
-# Install Avahi (often pre-installed on Pi)
+# Install (usually pre-installed on Pi OS)
 sudo apt install avahi-daemon
 
-# Your device is now reachable as <hostname>.local
-ping raspberrypi.local
-
-# Browse services on network
-avahi-browse -art
-
-# Publish a custom service
-avahi-publish -s "My Web Server" _http._tcp 8080
+# Start and enable
+sudo systemctl enable avahi-daemon
+sudo systemctl start avahi-daemon
 ```
 
-### Service Discovery
+### Configure Hostname
 
-mDNS also supports service discovery (DNS-SD):
 ```bash
-# Find all HTTP servers
-avahi-browse _http._tcp
+# Set hostname
+sudo hostnamectl set-hostname mypi
 
-# Find all SSH servers
-avahi-browse _ssh._tcp
-
-# Find all MQTT brokers
-avahi-browse _mqtt._tcp
+# The device is now reachable as:
+# mypi.local
 ```
+
+### Browse/Discover Services
+
+```bash
+# Install tools
+sudo apt install avahi-utils
+
+# Browse all services
+avahi-browse -a
+
+# Browse specific service type
+avahi-browse _http._tcp       # Web servers
+avahi-browse _ssh._tcp        # SSH servers
+avahi-browse _printer._tcp    # Printers
+avahi-browse _smb._tcp        # Samba/Windows shares
+
+# Resolve a hostname
+avahi-resolve -n mypi.local
+avahi-resolve -a 192.168.1.50  # Reverse lookup
+
+# Detailed service browsing
+avahi-browse -art              # All services, resolve, terminate
+```
+
+### Publish Custom Services
+
+Create a service file in `/etc/avahi/services/`:
+
+```xml
+<!-- /etc/avahi/services/http.service -->
+<?xml version="1.0" standalone='no'?>
+<!DOCTYPE service-group SYSTEM "avahi-service.dtd">
+<service-group>
+  <name replace-wildcards="yes">Web Server on %h</name>
+  <service>
+    <type>_http._tcp</type>
+    <port>80</port>
+  </service>
+</service-group>
+```
+
+```bash
+sudo systemctl restart avahi-daemon
+```
+
+### mDNS on Different Platforms
+
+| Platform | Implementation | Notes                                    |
+|----------|---------------|------------------------------------------|
+| Linux    | Avahi         | `avahi-daemon`                            |
+| macOS    | Bonjour       | Built-in, always active                   |
+| Windows  | Bonjour/mDNS  | Built-in on Win10+, or install Bonjour    |
+| iOS      | Bonjour       | Built-in                                  |
+| Android  | Varies        | Support is inconsistent                    |
+| ESP32    | ESPmDNS       | `MDNS.begin("hostname")`                 |
+
+### ESP32 mDNS
+
+```cpp
+#include <ESPmDNS.h>
+
+void setup() {
+    WiFi.begin(ssid, password);
+    // ... wait for connection
+
+    if (MDNS.begin("esp32-sensor")) {
+        Serial.println("mDNS: esp32-sensor.local");
+        MDNS.addService("http", "tcp", 80);  // Advertise web server
+    }
+}
+```
+
+Now the ESP32 is reachable at `esp32-sensor.local` from any mDNS-capable device on the LAN.
+
+---
+
+## DNS Over HTTPS / DNS Over TLS
+
+For encrypted DNS queries (prevent ISP snooping):
+
+### Using cloudflared (DoH Proxy)
+
+```bash
+# Install cloudflared
+wget https://github.com/cloudflare/cloudflared/releases/latest/download/cloudflared-linux-arm
+sudo mv cloudflared-linux-arm /usr/local/bin/cloudflared
+sudo chmod +x /usr/local/bin/cloudflared
+
+# Run as DNS proxy
+cloudflared proxy-dns --port 5053 --upstream https://1.1.1.1/dns-query
+
+# Point dnsmasq to cloudflared
+# In /etc/dnsmasq.conf:
+server=127.0.0.1#5053
+```
+
+### Using stubby (DoT)
+
+```bash
+sudo apt install stubby
+
+# stubby listens on 127.0.0.1:53 by default
+# Configure upstream in /etc/stubby/stubby.yml
+# Point dnsmasq to: server=127.0.0.1#53
+```
+
+---
 
 ## Troubleshooting
 
-| Issue | Cause | Fix |
-|---|---|---|
-| Device not getting IP | DHCP server not running | Check `systemctl status dnsmasq` |
-| "Name not resolved" | DNS misconfigured | Check `/etc/resolv.conf`, try `dig` |
-| `.local` not working | Avahi not running | `sudo systemctl start avahi-daemon` |
-| DHCP conflicts | Multiple DHCP servers | Disable DHCP on router or dnsmasq |
-| Slow DNS resolution | Bad upstream DNS | Try different DNS servers (1.1.1.1) |
-| Lease not renewing | Firewall blocking UDP 67/68 | Check iptables rules |
+| Problem                         | Check                                             |
+|---------------------------------|---------------------------------------------------|
+| Name resolution fails           | `cat /etc/resolv.conf` — correct DNS server?      |
+| dnsmasq won't start             | Port 53 already in use? `sudo ss -ulnp | grep 53` |
+| systemd-resolved conflicts      | `sudo systemctl disable systemd-resolved`          |
+| DHCP not assigning IPs          | Check interface and range in dnsmasq.conf          |
+| .local names not working        | Install/start avahi-daemon                         |
+| Pi-hole blocking too much       | Check query log, whitelist domains                 |
+| DNS slow                        | Check upstream servers, increase cache-size        |
+| Lease not renewing              | Check lease file permissions, restart dnsmasq      |
+
+### systemd-resolved Conflicts
+
+On Ubuntu/newer Debian, `systemd-resolved` listens on port 53, conflicting with dnsmasq:
+
+```bash
+# Option 1: Disable systemd-resolved
+sudo systemctl disable systemd-resolved
+sudo systemctl stop systemd-resolved
+sudo rm /etc/resolv.conf
+echo "nameserver 127.0.0.1" | sudo tee /etc/resolv.conf
+
+# Option 2: Change systemd-resolved to not listen on port 53
+sudo nano /etc/systemd/resolved.conf
+# Set: DNSStubListener=no
+sudo systemctl restart systemd-resolved
+```
