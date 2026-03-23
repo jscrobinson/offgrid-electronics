@@ -1,0 +1,48 @@
+name: Release
+
+on:
+  push:
+    branches: [master]
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Conventional Changelog
+        id: changelog
+        uses: TriPSs/conventional-changelog-action@v5
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          skip-version-file: "true"
+          output-file: "false"
+          skip-commit: "true"
+          skip-on-empty: "true"
+
+      - name: Create release zip
+        if: steps.changelog.outputs.skipped == 'false'
+        run: |
+          VERSION="${{ steps.changelog.outputs.tag }}"
+          ZIP_NAME="offgrid-electronics-${VERSION}.zip"
+          zip -r "$ZIP_NAME" \
+            docs/ scripts/ config/ static/ templates/ \
+            README.md LICENSE Makefile .gitignore \
+            -x '*.git*'
+          echo "ZIP_NAME=$ZIP_NAME" >> "$GITHUB_ENV"
+          echo "ZIP_PATH=$(pwd)/$ZIP_NAME" >> "$GITHUB_ENV"
+
+      - name: Create GitHub Release
+        if: steps.changelog.outputs.skipped == 'false'
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ steps.changelog.outputs.tag }}
+          name: ${{ steps.changelog.outputs.tag }}
+          body: ${{ steps.changelog.outputs.clean_changelog }}
+          files: ${{ env.ZIP_PATH }}
