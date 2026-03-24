@@ -39,7 +39,7 @@ log_ok "Templates copied"
 section "Copying downloaded content"
 
 # Always copy these
-for dir in docs html toolchains editors sdr radio datasheets packages fonts; do
+for dir in docs html toolchains editors sdr radio firmware datasheets packages fonts; do
     src="${BUILD_DIR}/${dir}"
     if [[ -d "$src" ]]; then
         log_info "Copying build/${dir}/..."

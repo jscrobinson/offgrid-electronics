@@ -1,4 +1,4 @@
-.PHONY: all docs html mirror toolchains editors sdr chirp docker packages usb usb-lite verify size clean
+.PHONY: all docs html mirror toolchains editors sdr chirp firmware docker packages datasheets usb usb-lite verify size clean
 
 SHELL := /bin/bash
 USB ?= /mnt/e
@@ -6,7 +6,7 @@ BUILD := build
 SCRIPTS := scripts
 
 # Default: build everything
-all: docs mirror toolchains editors sdr chirp docker packages datasheets
+all: docs mirror toolchains editors sdr chirp firmware docker packages datasheets
 
 # Authored docs are already in docs/ — nothing to build
 docs:
@@ -36,6 +36,10 @@ sdr:
 # Download CHIRP
 chirp:
 	bash $(SCRIPTS)/download-chirp.sh
+
+# Download firmware images (Meshtastic, esptool)
+firmware:
+	bash $(SCRIPTS)/download-firmware.sh
 
 # Download and save Docker images
 docker:
