@@ -1,5 +1,17 @@
 # Changelog
 
+## [1.5.0](https://github.com/jscrobinson/offgrid-electronics/compare/v1.4.0...v1.5.0) (2026-03-24)
+
+
+### Features
+
+* add Techy Prepper logo to README, HTML docs, and index ([6ddc2d9](https://github.com/jscrobinson/offgrid-electronics/commit/6ddc2d987eb0e5850e364a61b272c44c9dfbf492))
+
+
+### Bug Fixes
+
+* replace logo with transparent background version ([e87bbf1](https://github.com/jscrobinson/offgrid-electronics/commit/e87bbf1f6fa79df852f80ed0fddcddfeee1e4ce7))
+
 ## [1.4.0](https://github.com/jscrobinson/offgrid-electronics/compare/v1.3.0...v1.4.0) (2026-03-24)
 
 
