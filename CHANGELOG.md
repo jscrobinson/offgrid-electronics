@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.2.0](https://github.com/jscrobinson/offgrid-electronics/compare/v1.1.0...v1.2.0) (2026-03-24)
+
+
+### Features
+
+* add firmware download script ([bb4f3e7](https://github.com/jscrobinson/offgrid-electronics/commit/bb4f3e7f8268f64567e69115d9e28177d0785fc9))
+* build full USB contents in release pipeline ([e20c5a0](https://github.com/jscrobinson/offgrid-electronics/commit/e20c5a049f3fed7b9dd59d39ea6f1290ad0227f4))
+
 ## [1.1.0](https://github.com/jscrobinson/offgrid-electronics/compare/v1.0.0...v1.1.0) (2026-03-24)
 
 
