@@ -162,12 +162,20 @@ jobs:
             -x '*.git*'
           echo "Core: $(du -h "offgrid-electronics-${VERSION}-core.zip" | cut -f1)"
 
-          # Toolchains: Arduino IDE, ESP-IDF, PlatformIO, editors
-          if [ -d build/toolchains ] || [ -d build/editors ]; then
+          # Toolchains: Arduino IDE, ESP-IDF, PlatformIO
+          if [ -d build/toolchains ]; then
             zip -r "offgrid-electronics-${VERSION}-toolchains.zip" \
-              build/toolchains/ build/editors/ \
+              build/toolchains/ \
               -x '*.git*' 2>/dev/null || true
             echo "Toolchains: $(du -h "offgrid-electronics-${VERSION}-toolchains.zip" | cut -f1)"
+          fi
+
+          # Editors: VS Code portable + extensions, micro
+          if [ -d build/editors ]; then
+            zip -r "offgrid-electronics-${VERSION}-editors.zip" \
+              build/editors/ \
+              -x '*.git*' 2>/dev/null || true
+            echo "Editors: $(du -h "offgrid-electronics-${VERSION}-editors.zip" | cut -f1)"
           fi
 
           # Mirrored docs: Python, Node.js, Arduino, ESP-IDF, Meshtastic
