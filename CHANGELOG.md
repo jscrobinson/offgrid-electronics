@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.2.1](https://github.com/jscrobinson/offgrid-electronics/compare/v1.2.0...v1.2.1) (2026-03-24)
+
+
+### Bug Fixes
+
+* split release into multiple zips to stay under 2 GB limit ([a2e8dc3](https://github.com/jscrobinson/offgrid-electronics/commit/a2e8dc35e5fa278734a9475ef70c89d6cb5e9597))
+
 ## [1.2.0](https://github.com/jscrobinson/offgrid-electronics/compare/v1.1.0...v1.2.0) (2026-03-24)
 
 
