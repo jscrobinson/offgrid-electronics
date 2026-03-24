@@ -113,6 +113,7 @@
 - [Meshtastic Config](mesh-networking/meshtastic-config.md)
 - [Meshtastic on T-Beam](mesh-networking/meshtastic-tbeam.md)
 - [Meshtastic on Heltec V3](mesh-networking/meshtastic-heltec.md)
+- [MeshCore](mesh-networking/meshcore.md)
 - [Mesh Network Planning](mesh-networking/mesh-network-planning.md)
 - [LoRa Mesh Alternatives](mesh-networking/lora-mesh-alternatives.md)
 
