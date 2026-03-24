@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.2.2](https://github.com/jscrobinson/offgrid-electronics/compare/v1.2.1...v1.2.2) (2026-03-24)
+
+
+### Bug Fixes
+
+* split toolchains and editors into separate zips ([2de7200](https://github.com/jscrobinson/offgrid-electronics/commit/2de720064ef0a048e208d774b5d937eb94f4ed0b))
+
 ## [1.2.1](https://github.com/jscrobinson/offgrid-electronics/compare/v1.2.0...v1.2.1) (2026-03-24)
 
 
