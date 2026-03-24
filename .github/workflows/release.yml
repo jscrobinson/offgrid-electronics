@@ -67,6 +67,7 @@ jobs:
     needs: [release-please, test]
     if: needs.release-please.outputs.release_created == 'true'
     runs-on: ubuntu-latest
+    timeout-minutes: 60
     steps:
       - uses: actions/checkout@v4
 
@@ -74,18 +75,97 @@ jobs:
         with:
           python-version: "3.12"
 
+      - name: Install system dependencies
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq zip wget git
+
       - name: Build HTML documentation
         run: python3 scripts/build-html.py
+
+      # --- Mirror external docs ---
+      - name: Mirror Python docs
+        run: bash scripts/mirror-python-docs.sh
+        continue-on-error: true
+
+      - name: Mirror Node.js docs
+        run: bash scripts/mirror-nodejs-docs.sh
+        continue-on-error: true
+
+      - name: Mirror Arduino docs
+        run: bash scripts/mirror-arduino-docs.sh
+        continue-on-error: true
+
+      - name: Mirror ESP-IDF docs
+        run: bash scripts/mirror-esp-idf-docs.sh
+        continue-on-error: true
+
+      - name: Mirror Meshtastic docs
+        run: bash scripts/mirror-meshtastic-docs.sh
+        continue-on-error: true
+
+      # --- Download toolchains ---
+      - name: Download toolchains
+        run: bash scripts/download-toolchains.sh
+        continue-on-error: true
+
+      - name: Download portable editors
+        run: bash scripts/download-portable-editors.sh
+        continue-on-error: true
+
+      # --- Download SDR software ---
+      - name: Download SDR software
+        run: bash scripts/download-sdr-software.sh
+        continue-on-error: true
+
+      # --- Download CHIRP ---
+      - name: Download CHIRP
+        run: bash scripts/download-chirp.sh
+        continue-on-error: true
+
+      # --- Download firmware ---
+      - name: Download firmware
+        run: bash scripts/download-firmware.sh
+        continue-on-error: true
+
+      # --- Download datasheets ---
+      - name: Download datasheets
+        run: bash scripts/download-datasheets.sh
+        continue-on-error: true
+
+      # --- Cache packages ---
+      - name: Cache npm packages
+        run: bash scripts/download-npm-packages.sh
+        continue-on-error: true
+
+      - name: Cache pip packages
+        run: bash scripts/download-pip-packages.sh
+        continue-on-error: true
+
+      # --- Docker images (skipped — too large for GHA, users run locally) ---
+      # Docker images require `docker pull` + `docker save` which is slow
+      # and produces 8-12 GB of tarballs. Users should run `make docker` locally.
+
+      - name: Show build sizes
+        run: |
+          echo "=== Build directory contents ==="
+          du -sh build/*/ 2>/dev/null || echo "(empty)"
+          echo ""
+          echo "=== Total build size ==="
+          du -sh build/ 2>/dev/null || echo "0"
 
       - name: Create release zip
         run: |
           VERSION="${{ needs.release-please.outputs.tag_name }}"
           ZIP_NAME="offgrid-electronics-${VERSION}.zip"
           zip -r "$ZIP_NAME" \
-            docs/ build/html/ scripts/ config/ static/ templates/ \
+            docs/ build/ scripts/ config/ static/ templates/ \
             START_HERE.html README.md LICENSE Makefile .gitignore \
-            -x '*.git*'
+            CHANGELOG.md \
+            -x '*.git*' \
+            -x 'build/docs/devdocs/devdocs/.git/*'
           echo "ZIP_NAME=$ZIP_NAME" >> "$GITHUB_ENV"
+          echo "Zip size: $(du -h "$ZIP_NAME" | cut -f1)"
 
       - name: Upload release asset
         uses: softprops/action-gh-release@v2
