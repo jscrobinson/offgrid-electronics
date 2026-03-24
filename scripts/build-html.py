@@ -455,6 +455,9 @@ a:hover { text-decoration: underline; }
 .sidebar nav details summary::before { content: "\\25B6 "; font-size: 0.65em; margin-right: 4px; display: inline-block; transition: transform 0.15s; }
 .sidebar nav details[open] > summary::before { transform: rotate(90deg); }
 .sidebar nav details > ul { padding-left: 10px; }
+.sidebar-donate { padding: 15px 20px; border-top: 1px solid %(border)s; margin-top: 10px; text-align: center; }
+.sidebar-donate a { display: inline-block; padding: 8px 16px; background: #0070ba; color: #fff; border-radius: 5px; font-size: 0.85em; font-weight: 600; text-decoration: none; }
+.sidebar-donate a:hover { opacity: 0.85; }
 
 /* Search box in sidebar */
 .sidebar-search { padding: 10px 20px; }
@@ -599,6 +602,9 @@ def get_template():
 {{NAV}}
             </ul>
         </nav>
+        <div class="sidebar-donate">
+            <a href="https://www.paypal.com/donate/?hosted_button_id=WSDYCN7CUHE98" target="_blank" rel="noopener">Donate via PayPal</a>
+        </div>
     </aside>
     <div class="main">
         <div class="breadcrumb">{{BREADCRUMB}}</div>

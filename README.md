@@ -97,6 +97,16 @@ make docker
 make packages
 ```
 
+## Support
+
+If you find this project useful, consider making a donation to support continued development:
+
+<p align="center">
+  <a href="https://www.paypal.com/donate/?hosted_button_id=WSDYCN7CUHE98">
+    <img src="https://img.shields.io/badge/Donate-PayPal-blue?style=for-the-badge&logo=paypal" alt="Donate via PayPal">
+  </a>
+</p>
+
 ## Contributing
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines on adding docs, fixing issues, and submitting pull requests.
