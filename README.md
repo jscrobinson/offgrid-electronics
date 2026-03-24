@@ -2,13 +2,29 @@
 
 A comprehensive offline documentation and tooling repository for electronics development, radio communications, and mesh networking. Everything you need to keep building when the internet goes dark.
 
+## Download
+
+Grab the latest release from the [Releases page](https://github.com/jscrobinson/offgrid-electronics/releases/latest). Each release includes pre-built zips:
+
+| Zip | Contents | Size |
+|---|---|---|
+| **core** | HTML docs site, markdown source, scripts, config | ~2 MB |
+| **toolchains** | Arduino IDE, ESP-IDF, PlatformIO | ~1.6 GB |
+| **editors** | VS Code portable + extensions, micro editor | ~550 MB |
+| **mirrored-docs** | Python, Node.js, Arduino, ESP-IDF, Meshtastic offline docs | ~250 MB |
+| **extras** | SDR software, CHIRP, firmware, datasheets, cached npm/pip packages | ~240 MB |
+
+**To use:** Download all zips and extract them into the same folder. Open `index.html` in a browser to get started.
+
+> Docker images are not included in releases (too large). Run `make docker` locally to pull and save them.
+
 ## What's Inside
 
 - **Hardware References** — Raspberry Pi, Arduino, ESP32, LoRa (T-Beam 1.2, Heltec V3), displays, sensors
 - **Electronics Fundamentals** — Components, circuits, soldering, test equipment
 - **Communication Protocols** — I2C, SPI, UART, MQTT, Modbus
 - **Radio & SDR** — Amateur radio, Baofeng/JucJet programming, CHIRP, RTL-SDR, SDR#, GQRX, GNU Radio
-- **Mesh Networking** — Meshtastic setup and configuration for T-Beam and Heltec
+- **Mesh Networking** — Meshtastic, MeshCore, and Reticulum for T-Beam and Heltec
 - **Power Systems** — Batteries, solar charging, power calculations
 - **Programming** — Python, MicroPython, Node.js, C/C++ embedded, bash
 - **Networking** — IP, WiFi AP mode, SSH, WireGuard
@@ -76,6 +92,10 @@ make docker
 # Cache npm/pip packages
 make packages
 ```
+
+## Contributing
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines on adding docs, fixing issues, and submitting pull requests.
 
 ## License
 
