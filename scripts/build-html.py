@@ -433,7 +433,8 @@ a:hover { text-decoration: underline; }
     overflow-y: auto; position: fixed; top: 0; bottom: 0; left: 0;
     z-index: 100;
 }
-.sidebar-header { padding: 0 20px 15px; border-bottom: 1px solid %(border)s; margin-bottom: 10px; }
+.sidebar-header { padding: 0 20px 15px; border-bottom: 1px solid %(border)s; margin-bottom: 10px; text-align: center; }
+.sidebar-logo { width: 70px; height: 70px; border-radius: 50%%; margin-bottom: 8px; }
 .sidebar-header h2 { color: %(accent)s; font-size: 1.1em; }
 .sidebar-header a { color: %(accent)s; }
 .sidebar-header p { color: %(text_dim)s; font-size: 0.8em; }
@@ -584,6 +585,7 @@ def get_template():
     <button class="sidebar-toggle" onclick="document.querySelector('.sidebar').classList.toggle('open')" aria-label="Toggle navigation">&#9776;</button>
     <aside class="sidebar">
         <div class="sidebar-header">
+            <a href="{{ROOT}}/index.html"><img src="{{ROOT}}/logo.png" alt="Techy Prepper" class="sidebar-logo"></a>
             <h2><a href="{{ROOT}}/index.html">Tech Survival USB</a></h2>
             <p>Offline Documentation</p>
         </div>
@@ -849,8 +851,9 @@ def generate_index_html(md_files, nav_tree):
             <ul>{''.join(links)}</ul>
         </div>""")
 
-    body = f"""<h1>Tech Survival USB</h1>
-<p class="subtitle">Offline documentation for electronics, radio, and mesh networking</p>
+    body = f"""<div style="text-align:center;margin-bottom:10px;"><img src="logo.png" alt="Techy Prepper" style="width:100px;border-radius:50%%;"></div>
+<h1 style="text-align:center;">Tech Survival USB</h1>
+<p class="subtitle" style="text-align:center;">Offline documentation for electronics, radio, and mesh networking</p>
 <div class="tip"><strong>Tip:</strong> Use the sidebar to navigate, or press <kbd>/</kbd> to search all docs.</div>
 <h2>Documentation</h2>
 <div class="grid">
@@ -991,6 +994,14 @@ def main():
     search_js_path = BUILD_DIR / "search.js"
     search_js_path.write_text(generate_search_js(), encoding="utf-8")
     total_size += search_js_path.stat().st_size
+
+    # Copy logo if it exists
+    logo_src = PROJECT_ROOT / "static" / "images" / "logo.png"
+    logo_dst = BUILD_DIR / "logo.png"
+    if logo_src.exists():
+        shutil.copy2(logo_src, logo_dst)
+        print(f"  Copied: logo.png")
+        total_size += logo_dst.stat().st_size
 
     # Summary
     print()

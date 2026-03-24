@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="static/images/logo.png" alt="Techy Prepper" width="150">
+</p>
+
 # Offgrid Electronics — Tech Survival USB Stick
 
 A comprehensive offline documentation and tooling repository for electronics development, radio communications, and mesh networking. Everything you need to keep building when the internet goes dark.
