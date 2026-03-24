@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Offgrid Electronics — Tech Survival USB</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            line-height: 1.6; color: #e0e0e0; background: #1a1a2e;
+            max-width: 900px; margin: 0 auto; padding: 40px 20px;
+        }
+        h1 { color: #00d4ff; font-size: 2.2em; margin-bottom: 8px; }
+        .subtitle { color: #888; font-size: 1.1em; margin-bottom: 40px; }
+        h2 { color: #00d4ff; margin: 30px 0 15px; font-size: 1.3em; border-bottom: 1px solid #333; padding-bottom: 5px; }
+        a { color: #00d4ff; text-decoration: none; }
+        a:hover { text-decoration: underline; }
+
+        .primary-link {
+            display: inline-block; padding: 16px 40px; background: #00d4ff;
+            color: #1a1a2e; font-size: 1.2em; font-weight: 700;
+            border-radius: 8px; margin: 10px 5px; transition: opacity 0.2s;
+        }
+        .primary-link:hover { opacity: 0.85; text-decoration: none; }
+
+        .secondary-link {
+            display: inline-block; padding: 12px 28px; background: #16213e;
+            border: 1px solid #333; border-radius: 8px; color: #e0e0e0;
+            font-size: 1em; margin: 8px 5px; transition: border-color 0.2s;
+        }
+        .secondary-link:hover { border-color: #00d4ff; text-decoration: none; }
+
+        .links { margin: 20px 0 30px; }
+
+        .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 14px; margin: 15px 0; }
+        .card {
+            background: #16213e; border: 1px solid #333; border-radius: 6px;
+            padding: 14px 18px; transition: border-color 0.2s;
+        }
+        .card:hover { border-color: #00d4ff; }
+        .card h3 { color: #7fdbca; font-size: 1em; margin-bottom: 6px; }
+        .card ul { list-style: none; padding: 0; font-size: 0.9em; }
+        .card li { padding: 2px 0; }
+        .card li::before { content: "- "; color: #555; }
+
+        code { background: #0a0a1a; padding: 2px 6px; border-radius: 3px; font-size: 0.85em; }
+        .note { background: #16213e; border-left: 3px solid #00d4ff; padding: 12px 16px; margin: 20px 0; border-radius: 0 4px 4px 0; font-size: 0.9em; }
+        footer { margin-top: 40px; padding-top: 20px; border-top: 1px solid #333; color: #666; text-align: center; font-size: 0.85em; }
+    </style>
+</head>
+<body>
+    <h1>Offgrid Electronics</h1>
+    <p class="subtitle">Tech Survival USB — offline docs, tools, and firmware for electronics, radio, SDR, and mesh networking</p>
+
+    <div class="links">
+        <a class="primary-link" href="build/html/index.html">Browse HTML Documentation</a>
+        <a class="secondary-link" href="docs/index.md">Raw Markdown Index</a>
+        <a class="secondary-link" href="START_HERE.html">START_HERE</a>
+    </div>
+
+    <div class="note">
+        <strong>First time?</strong> Click <strong>Browse HTML Documentation</strong> above. If it doesn't work, run <code>make html</code> to build the HTML site from the markdown source, or read the markdown files directly.
+    </div>
+
+    <h2>Documentation</h2>
+    <div class="grid">
+        <div class="card">
+            <h3>Hardware</h3>
+            <ul>
+                <li><a href="build/html/hardware/lora/lilygo-tbeam-v1.2.html">T-Beam v1.2</a></li>
+                <li><a href="build/html/hardware/lora/heltec-esp32-v3.html">Heltec V3</a></li>
+                <li><a href="build/html/hardware/esp32/overview.html">ESP32 Overview</a></li>
+                <li><a href="build/html/hardware/arduino/overview.html">Arduino</a></li>
+                <li><a href="build/html/hardware/raspberry-pi/overview.html">Raspberry Pi</a></li>
+            </ul>
+        </div>
+        <div class="card">
+            <h3>Radio & SDR</h3>
+            <ul>
+                <li><a href="build/html/radio/baofeng-uv5r.html">Baofeng UV-5R / JucJet</a></li>
+                <li><a href="build/html/radio/chirp-programming.html">CHIRP Programming</a></li>
+                <li><a href="build/html/radio/emergency-frequencies.html">Emergency Frequencies</a></li>
+                <li><a href="build/html/sdr/overview.html">SDR Overview</a></li>
+                <li><a href="build/html/sdr/frequency-reference.html">Frequency Reference</a></li>
+            </ul>
+        </div>
+        <div class="card">
+            <h3>Mesh Networking</h3>
+            <ul>
+                <li><a href="build/html/mesh-networking/meshtastic-overview.html">Meshtastic</a></li>
+                <li><a href="build/html/mesh-networking/meshcore.html">MeshCore</a></li>
+                <li><a href="build/html/mesh-networking/meshtastic-tbeam.html">Meshtastic on T-Beam</a></li>
+                <li><a href="build/html/mesh-networking/meshtastic-heltec.html">Meshtastic on Heltec V3</a></li>
+                <li><a href="build/html/mesh-networking/lora-mesh-alternatives.html">Alternatives</a></li>
+            </ul>
+        </div>
+        <div class="card">
+            <h3>Electronics & Power</h3>
+            <ul>
+                <li><a href="build/html/electronics/fundamentals.html">Fundamentals</a></li>
+                <li><a href="build/html/electronics/common-circuits.html">Common Circuits</a></li>
+                <li><a href="build/html/power/solar-charging.html">Solar Charging</a></li>
+                <li><a href="build/html/power/battery-types.html">Battery Types</a></li>
+                <li><a href="build/html/radio/morse-code.html">Morse Code</a></li>
+            </ul>
+        </div>
+        <div class="card">
+            <h3>Programming</h3>
+            <ul>
+                <li><a href="build/html/programming/python-quickref.html">Python</a></li>
+                <li><a href="build/html/programming/micropython.html">MicroPython</a></li>
+                <li><a href="build/html/programming/c-cpp-embedded.html">C/C++ Embedded</a></li>
+                <li><a href="build/html/programming/bash-scripting.html">Bash</a></li>
+                <li><a href="build/html/programming/git-reference.html">Git</a></li>
+            </ul>
+        </div>
+        <div class="card">
+            <h3>Networking & Survival</h3>
+            <ul>
+                <li><a href="build/html/networking/ssh-reference.html">SSH</a></li>
+                <li><a href="build/html/networking/vpn-wireguard.html">WireGuard VPN</a></li>
+                <li><a href="build/html/survival/solar-setup-guide.html">Solar Setup</a></li>
+                <li><a href="build/html/survival/field-repair.html">Field Repair</a></li>
+                <li><a href="build/html/survival/usb-stick-usage-guide.html">USB Usage Guide</a></li>
+            </ul>
+        </div>
+    </div>
+
+    <h2>Software & Tools</h2>
+    <div class="grid">
+        <div class="card">
+            <h3>Toolchains</h3>
+            <ul>
+                <li><a href="build/toolchains/arduino-ide/">Arduino IDE</a></li>
+                <li><a href="build/toolchains/esp-idf/">ESP-IDF</a></li>
+                <li><a href="build/toolchains/platformio/">PlatformIO</a></li>
+            </ul>
+        </div>
+        <div class="card">
+            <h3>SDR Software</h3>
+            <ul>
+                <li><a href="build/sdr/sdrsharp/">SDR# (Windows)</a></li>
+                <li><a href="build/sdr/gqrx/">GQRX (Linux)</a></li>
+                <li><a href="build/sdr/rtl-sdr/">RTL-SDR Drivers</a></li>
+                <li><a href="build/sdr/rtl_433/">rtl_433</a></li>
+            </ul>
+        </div>
+        <div class="card">
+            <h3>Firmware & Radio</h3>
+            <ul>
+                <li><a href="build/firmware/meshtastic/">Meshtastic Firmware</a></li>
+                <li><a href="build/firmware/esptool/">esptool</a></li>
+                <li><a href="build/radio/">CHIRP</a></li>
+                <li><a href="config/chirp-frequencies.csv">Frequency List (CSV)</a></li>
+            </ul>
+        </div>
+    </div>
+
+    <h2>Offline Package Install</h2>
+    <div class="note">
+        <code>pip install --no-index --find-links ./build/packages/pip/ &lt;package&gt;</code><br>
+        <code>npm install --cache ./build/packages/npm/ &lt;package&gt;</code><br>
+        <code>docker load &lt; ./build/docker/image-name.tar</code>
+    </div>
+
+    <footer>
+        Offgrid Electronics &mdash; Tech Survival USB<br>
+        Extract all release zips into the same folder for the complete USB contents.
+    </footer>
+</body>
+</html>

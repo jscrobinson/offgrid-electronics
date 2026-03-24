@@ -158,7 +158,7 @@ jobs:
           # Core: docs, HTML, scripts, config, static (always small)
           zip -r "offgrid-electronics-${VERSION}-core.zip" \
             docs/ build/html/ scripts/ config/ static/ templates/ \
-            START_HERE.html README.md LICENSE Makefile .gitignore CHANGELOG.md \
+            index.html START_HERE.html README.md LICENSE Makefile .gitignore CHANGELOG.md \
             -x '*.git*'
           echo "Core: $(du -h "offgrid-electronics-${VERSION}-core.zip" | cut -f1)"
 
