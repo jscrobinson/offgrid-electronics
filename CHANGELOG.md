@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.4.0](https://github.com/jscrobinson/offgrid-electronics/compare/v1.3.0...v1.4.0) (2026-03-24)
+
+
+### Features
+
+* add MeshCore documentation ([ed5ca1a](https://github.com/jscrobinson/offgrid-electronics/commit/ed5ca1a91fcee374d9dba467cf70fb667c84d7a4))
+* add root index.html entry point for release zip ([2cbd8aa](https://github.com/jscrobinson/offgrid-electronics/commit/2cbd8aa7a86cfbc537a9b56818dc5560cdfe51ca))
+
 ## [1.3.0](https://github.com/jscrobinson/offgrid-electronics/compare/v1.2.2...v1.3.0) (2026-03-24)
 
 
