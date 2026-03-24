@@ -76,9 +76,7 @@ jobs:
           python-version: "3.12"
 
       - name: Install system dependencies
-        run: |
-          sudo apt-get update -qq
-          sudo apt-get install -y -qq zip wget git
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq zip wget git
 
       - name: Build HTML documentation
         run: python3 scripts/build-html.py
@@ -142,9 +140,7 @@ jobs:
         run: bash scripts/download-pip-packages.sh
         continue-on-error: true
 
-      # --- Docker images (skipped — too large for GHA, users run locally) ---
-      # Docker images require `docker pull` + `docker save` which is slow
-      # and produces 8-12 GB of tarballs. Users should run `make docker` locally.
+      # --- Docker images skipped (8-12 GB, run `make docker` locally) ---
 
       - name: Show build sizes
         run: |
@@ -154,21 +150,52 @@ jobs:
           echo "=== Total build size ==="
           du -sh build/ 2>/dev/null || echo "0"
 
-      - name: Create release zip
+      # --- Create split release zips (GitHub max 2 GB per asset) ---
+      - name: Create release zips
         run: |
           VERSION="${{ needs.release-please.outputs.tag_name }}"
-          ZIP_NAME="offgrid-electronics-${VERSION}.zip"
-          zip -r "$ZIP_NAME" \
-            docs/ build/ scripts/ config/ static/ templates/ \
-            START_HERE.html README.md LICENSE Makefile .gitignore \
-            CHANGELOG.md \
-            -x '*.git*' \
-            -x 'build/docs/devdocs/devdocs/.git/*'
-          echo "ZIP_NAME=$ZIP_NAME" >> "$GITHUB_ENV"
-          echo "Zip size: $(du -h "$ZIP_NAME" | cut -f1)"
 
-      - name: Upload release asset
+          # Core: docs, HTML, scripts, config, static (always small)
+          zip -r "offgrid-electronics-${VERSION}-core.zip" \
+            docs/ build/html/ scripts/ config/ static/ templates/ \
+            START_HERE.html README.md LICENSE Makefile .gitignore CHANGELOG.md \
+            -x '*.git*'
+          echo "Core: $(du -h "offgrid-electronics-${VERSION}-core.zip" | cut -f1)"
+
+          # Toolchains: Arduino IDE, ESP-IDF, PlatformIO, editors
+          if [ -d build/toolchains ] || [ -d build/editors ]; then
+            zip -r "offgrid-electronics-${VERSION}-toolchains.zip" \
+              build/toolchains/ build/editors/ \
+              -x '*.git*' 2>/dev/null || true
+            echo "Toolchains: $(du -h "offgrid-electronics-${VERSION}-toolchains.zip" | cut -f1)"
+          fi
+
+          # Mirrored docs: Python, Node.js, Arduino, ESP-IDF, Meshtastic
+          if [ -d build/docs ]; then
+            zip -r "offgrid-electronics-${VERSION}-mirrored-docs.zip" \
+              build/docs/ \
+              -x '*.git*' -x 'build/docs/devdocs/devdocs/.git/*' 2>/dev/null || true
+            echo "Mirrored docs: $(du -h "offgrid-electronics-${VERSION}-mirrored-docs.zip" | cut -f1)"
+          fi
+
+          # Extras: SDR, CHIRP, firmware, datasheets, packages
+          EXTRA_DIRS=""
+          for d in build/sdr build/radio build/firmware build/datasheets build/packages; do
+            [ -d "$d" ] && EXTRA_DIRS="$EXTRA_DIRS $d/"
+          done
+          if [ -n "$EXTRA_DIRS" ]; then
+            zip -r "offgrid-electronics-${VERSION}-extras.zip" \
+              $EXTRA_DIRS \
+              -x '*.git*' 2>/dev/null || true
+            echo "Extras: $(du -h "offgrid-electronics-${VERSION}-extras.zip" | cut -f1)"
+          fi
+
+          echo ""
+          echo "=== Release zips ==="
+          ls -lh offgrid-electronics-*.zip
+
+      - name: Upload release assets
         uses: softprops/action-gh-release@v2
         with:
           tag_name: ${{ needs.release-please.outputs.tag_name }}
-          files: ${{ env.ZIP_NAME }}
+          files: offgrid-electronics-*.zip
