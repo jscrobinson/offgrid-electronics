@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.6.0](https://github.com/jscrobinson/offgrid-electronics/compare/v1.5.0...v1.6.0) (2026-03-24)
+
+
+### Features
+
+* add PayPal donation link to README, index, and HTML docs ([6b1677e](https://github.com/jscrobinson/offgrid-electronics/commit/6b1677eb12ecd2071933112fa73c533281b92122))
+
 ## [1.5.0](https://github.com/jscrobinson/offgrid-electronics/compare/v1.4.0...v1.5.0) (2026-03-24)
 
 
